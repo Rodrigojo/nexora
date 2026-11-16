@@ -1,0 +1,22 @@
+:root {
+  --bg: #0B0B14; --surface: #151524; --line: #26263A;
+  --text: #F2F2F7; --muted: #9A9AB0;
+  --violet: #7C5CFF; --cyan: #22D3EE;
+  --grad: linear-gradient(135deg, var(--violet), var(--cyan));
+  --radius: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 20px; padding: 32px 20px; text-align: center; }
+.logo { width: 96px; height: 96px; }
+h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.slogan { color: var(--muted); font-size: 1.05rem; }
+.status { width: 100%; max-width: 520px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; text-align: left; }
+.status h2 { font-size: 1rem; margin-bottom: 10px; }
+.status li { list-style: none; display: flex; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.tag { color: var(--muted); font-size: .8rem; }
