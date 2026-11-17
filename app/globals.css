@@ -40,3 +40,10 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .msg .item { padding-left: 4px; }
 .msg code { background: var(--line); border-radius: 6px; padding: 0 4px; }
 .msg.model { white-space: normal; }
+.conta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); text-align: left; }
+.conta.form { flex-direction: column; align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.conta input { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+.conta .botoes { display: flex; gap: 8px; }
+.conta button { background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 8px 14px; font-weight: 600; }
+.conta button.limpar { background: none; color: var(--muted); font-weight: 400; }
+.conta .aviso { color: var(--cyan); font-size: .85rem; }
