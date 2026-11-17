@@ -3,6 +3,7 @@ import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat } from '../../../lib/core/validate.js';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const ERRORS = {
   SEM_CHAVE: 'A NEXORA ainda não está conectada à IA. Tente mais tarde.',
