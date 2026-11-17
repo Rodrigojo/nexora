@@ -12,8 +12,8 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
   assert.deepEqual(VERSION_1.map((c) => c.id), [1, 2, 13, 14, 15, 16, 17, 20, 21, 22, 24]);
 });
 
-test('nenhuma capacidade aparece como ativa antes da integração real', () => {
-  assert.ok(CAPABILITIES.every((c) => c.status === 'planejada'));
+test('só as 11 da versão 1 estão ativas (verificadas com a IA real)', () => {
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 13, 14, 15, 16, 17, 20, 21, 22, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
