@@ -36,3 +36,7 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .chat button { background: var(--grad); color: #fff; border: 0; border-radius: 14px; padding: 0 16px; font-weight: 600; }
 .chat button:disabled { opacity: .5; }
 .chat .limpar { align-self: center; background: none; color: var(--muted); padding: 4px; font-weight: 400; }
+.msg .tit { font-weight: 700; margin-top: 6px; }
+.msg .item { padding-left: 4px; }
+.msg code { background: var(--line); border-radius: 6px; padding: 0 4px; }
+.msg.model { white-space: normal; }

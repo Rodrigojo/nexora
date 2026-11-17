@@ -28,6 +28,11 @@ test('capacidades futuras são marcadas como indisponíveis', () => {
   assert.equal(r.disponivel, false);
 });
 
+test('roteiro para vídeo é texto e fica disponível', () => {
+  assert.equal(detectIntent('Escreva um roteiro para meu vídeo do TikTok').disponivel, true);
+  assert.equal(detectIntent('Crie um vídeo do meu produto').capability.id, 5);
+});
+
 import { validateChat } from '../lib/core/validate.js';
 import { askGemini } from '../lib/ai/gemini.js';
 

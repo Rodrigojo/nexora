@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Texto from './Texto';
 
 const KEY = 'nexora_conversa';
 
@@ -40,7 +41,7 @@ export default function Chat() {
       <div className="msgs">
         {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um plano de estudos, um anúncio…</p>}
         {msgs.map((m, i) => (
-          <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>{m.text}</div>
+          <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>{m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}</div>
         ))}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}
         <div ref={end} />
