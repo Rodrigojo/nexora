@@ -1,15 +1,16 @@
 import { CAPABILITIES } from '../lib/core/capabilities.js';
+import Chat from './Chat.js';
 
-/** Etapa 1: tela inicial e painel de status real das capacidades.
- *  A conversa entra na etapa 2 (login e histórico) e na etapa 3 (API). */
 export default function Home() {
+  const ativas = CAPABILITIES.filter((c) => c.status === 'ativa').length;
   return (
     <main>
       <img className="logo" src="/logo.svg" alt="NEXORA" />
       <h1>NEXORA</h1>
       <p className="slogan">Uma inteligência. Múltiplas possibilidades.</p>
-      <section className="status">
-        <h2>Capacidades registradas: {CAPABILITIES.length}</h2>
+      <Chat />
+      <details className="status">
+        <summary>Capacidades: {ativas} ativas de {CAPABILITIES.length}</summary>
         <ul>
           {CAPABILITIES.map((c) => (
             <li key={c.id}>
@@ -18,7 +19,7 @@ export default function Home() {
             </li>
           ))}
         </ul>
-      </section>
+      </details>
     </main>
   );
 }

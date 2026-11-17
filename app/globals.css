@@ -20,3 +20,19 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .status li { list-style: none; display: flex; justify-content: space-between;
   padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
 .tag { color: var(--muted); font-size: .8rem; }
+.status summary { cursor: pointer; font-weight: 600; font-size: .95rem; }
+.status ul { margin-top: 10px; }
+.chat { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; }
+.msgs { display: flex; flex-direction: column; gap: 8px; max-height: 60dvh; overflow-y: auto; text-align: left; }
+.hint { color: var(--muted); font-size: .9rem; text-align: center; }
+.msg { padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; line-height: 1.45; font-size: .95rem; max-width: 90%; }
+.msg.user { align-self: flex-end; background: var(--violet); color: #fff; }
+.msg.model { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); }
+.msg.erro { border-color: #b4505a; color: #ffb4bc; }
+.pensando { color: var(--muted); }
+.chat form { display: flex; gap: 8px; }
+.chat textarea { flex: 1; resize: none; background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  border-radius: 14px; padding: 10px; font: inherit; }
+.chat button { background: var(--grad); color: #fff; border: 0; border-radius: 14px; padding: 0 16px; font-weight: 600; }
+.chat button:disabled { opacity: .5; }
+.chat .limpar { align-self: center; background: none; color: var(--muted); padding: 4px; font-weight: 400; }

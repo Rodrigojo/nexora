@@ -27,3 +27,31 @@ test('capacidades futuras são marcadas como indisponíveis', () => {
   const r = detectIntent('Faça uma música para meu vídeo');
   assert.equal(r.disponivel, false);
 });
+
+import { validateChat } from '../lib/core/validate.js';
+import { askGemini } from '../lib/ai/gemini.js';
+
+test('validação recusa vazio e corta excesso', () => {
+  assert.equal(validateChat({}).ok, false);
+  assert.equal(validateChat({ history: [{ role: 'model', text: 'oi' }] }).ok, false);
+  const r = validateChat({ history: [{ role: 'user', text: 'x'.repeat(9000) }] });
+  assert.equal(r.ok, true);
+  assert.equal(r.history[0].text.length, 4000);
+});
+
+test('Gemini: usa a chave no cabeçalho, troca de modelo no 404 e lê a resposta', async () => {
+  const calls = [];
+  const fake = async (url, opt) => {
+    calls.push({ url, key: opt.headers['x-goog-api-key'] });
+    if (calls.length === 1) return { ok: false, status: 404 };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'Olá!' }] } }] }) };
+  };
+  const r = await askGemini({ history: [{ role: 'user', text: 'oi' }], cap: null, apiKey: 'k', fetchImpl: fake });
+  assert.equal(r.text, 'Olá!');
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((c) => c.key === 'k' && !c.url.includes('key=')));
+});
+
+test('Gemini: sem chave dá erro claro', async () => {
+  await assert.rejects(askGemini({ history: [], apiKey: '' }), /SEM_CHAVE/);
+});
