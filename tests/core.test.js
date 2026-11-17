@@ -48,7 +48,7 @@ test('Gemini: usa a chave no cabeçalho, troca de modelo no 404 e lê a resposta
   };
   const r = await askGemini({ history: [{ role: 'user', text: 'oi' }], cap: null, apiKey: 'k', fetchImpl: fake });
   assert.equal(r.text, 'Olá!');
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3); // 404, lista de modelos, próximo modelo
   assert.ok(calls.every((c) => c.key === 'k' && !c.url.includes('key=')));
 });
 
