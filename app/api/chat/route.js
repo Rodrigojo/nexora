@@ -27,6 +27,6 @@ export async function POST(req) {
   } catch (e) {
     const msg = ERRORS[e.message] || 'A IA não respondeu agora. Tente de novo em instantes.';
     console.error('chat_error', e.message);
-    return Response.json({ erro: msg }, { status: e.message === 'LIMITE' ? 429 : 502 });
+    return Response.json({ erro: msg, codigo: String(e.message).slice(0, 60) }, { status: e.message === 'LIMITE' ? 429 : 502 });
   }
 }
