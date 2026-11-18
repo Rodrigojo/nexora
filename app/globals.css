@@ -47,3 +47,10 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .conta button { background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 8px 14px; font-weight: 600; }
 .conta button.limpar { background: none; color: var(--muted); font-weight: 400; }
 .conta .aviso { color: var(--cyan); font-size: .85rem; }
+
+/* Foto para análise (v2, capacidade 23) */
+.chat form .botao-foto { flex: 0 0 auto; font-size: 1.3rem; padding: 0 12px; }
+.foto-previa { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.foto-previa img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.foto-previa button { font-size: .9rem; }
+.foto-msg { display: block; max-width: 180px; max-height: 180px; border-radius: 10px; margin-bottom: 6px; }

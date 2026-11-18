@@ -1,6 +1,7 @@
 import { detectIntent, unavailableMessage } from '../../../lib/core/router.js';
+import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
-import { validateChat } from '../../../lib/core/validate.js';
+import { validateChat, validateImage } from '../../../lib/core/validate.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -16,14 +17,17 @@ export async function POST(req) {
   const check = validateChat(input);
   if (!check.ok) return Response.json({ erro: check.erro }, { status: 400 });
 
+  const img = validateImage(input.imagem);
+  if (!img.ok) return Response.json({ erro: img.erro }, { status: 400 });
+
   const last = check.history[check.history.length - 1].text;
-  const intent = detectIntent(last);
+  const intent = img.imagem ? { capability: getCapability(23), disponivel: true } : detectIntent(last);
   const cap = intent.capability;
   if (!intent.disponivel && cap.versao > 1) {
     return Response.json({ resposta: unavailableMessage(cap), capacidade: cap.id, ia: false });
   }
   try {
-    const { text } = await askGemini({ history: check.history, cap, apiKey: process.env.GEMINI_API_KEY });
+    const { text } = await askGemini({ history: check.history, cap, imagem: img.imagem, apiKey: process.env.GEMINI_API_KEY });
     return Response.json({ resposta: text, capacidade: cap.id, ia: true });
   } catch (e) {
     const msg = ERRORS[e.message] || 'A IA não respondeu agora. Tente de novo em instantes.';
