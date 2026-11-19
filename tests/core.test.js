@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -74,4 +74,23 @@ test('Gemini: envia a foto junto da última mensagem', async () => {
   await askGemini({ history: [{ role: 'user', text: 'o que é?' }], apiKey: 'k', imagem: { mime: 'image/jpeg', data: 'QUJD' }, fetchImpl: fake });
   assert.equal(body.contents[0].parts[0].inlineData.mimeType, 'image/jpeg');
   assert.equal(body.contents[0].parts[1].text, 'o que é?');
+});
+
+import { limparTexto, pcmParaWav, narrar } from '../lib/ai/voz.js';
+
+test('voz: limpa a formatação e cria WAV válido', () => {
+  assert.equal(limparTexto('**Olá** # mundo'), 'Olá  mundo');
+  const wav = pcmParaWav(Buffer.alloc(100));
+  assert.equal(wav.length, 144);
+  assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(detectIntent('Faça uma narração sobre o mar').capability.id, 9);
+  assert.equal(detectIntent('Faça uma narração sobre o mar').disponivel, true);
+});
+
+test('voz: pede áudio ao Gemini e devolve WAV', async () => {
+  let body;
+  const fake = async (url, opt) => { body = JSON.parse(opt.body); return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: Buffer.alloc(10).toString('base64') } }] } }] }) }; };
+  const r = await narrar({ texto: 'Oi', apiKey: 'k', fetchImpl: fake });
+  assert.deepEqual(body.generationConfig.responseModalities, ['AUDIO']);
+  assert.equal(Buffer.from(r.audio, 'base64').length, 54);
 });

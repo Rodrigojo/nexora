@@ -25,6 +25,31 @@ function reduzirFoto(file) {
   });
 }
 
+/** Botão 🔊 Ouvir: pede o áudio à NEXORA VOICE e toca no celular. */
+function Ouvir({ texto, auto }) {
+  const [estado, setEstado] = useState('');
+  const [src, setSrc] = useState(null);
+  const pedido = useRef(false);
+  async function gerar() {
+    if (pedido.current) return;
+    pedido.current = true; setEstado('gerando');
+    try {
+      const r = await fetch('/api/voz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto }) });
+      const d = await r.json();
+      if (d.audio) { setSrc(`data:${d.mime};base64,${d.audio}`); setEstado(''); }
+      else { setEstado(d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro); pedido.current = false; }
+    } catch { setEstado('Sem conexão. Tente de novo.'); pedido.current = false; }
+  }
+  useEffect(() => { if (auto) gerar(); }, [auto]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (src) return <audio className="audio-msg" controls autoPlay src={src} />;
+  return (
+    <div className="ouvir">
+      <button type="button" onClick={gerar} disabled={estado === 'gerando'}>{estado === 'gerando' ? 'Gerando áudio…' : '🔊 Ouvir'}</button>
+      {estado && estado !== 'gerando' && <span className="ouvir-erro">{estado}</span>}
+    </div>
+  );
+}
+
 export default function Chat() {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState('');
@@ -60,7 +85,7 @@ export default function Chat() {
   }, [usuario]);
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, ...m }) => m))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, ...m }) => m))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -84,7 +109,7 @@ export default function Chat() {
       });
       const d = await r.json();
       if (d.resposta) {
-        setMsgs([...next, { role: 'model', text: d.resposta }]);
+        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9 }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
@@ -111,6 +136,7 @@ export default function Chat() {
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
             {m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
+            {m.role === 'model' && !m.erro && <Ouvir texto={m.text} auto={m.narrar} />}
           </div>
         ))}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}
