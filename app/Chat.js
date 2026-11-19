@@ -87,7 +87,7 @@ export default function Chat() {
         setMsgs([...next, { role: 'model', text: d.resposta }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.resposta }]);
       } else {
-        setMsgs([...next, { role: 'model', text: d.erro, erro: true }]);
+        setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
       }
     } catch {
       setMsgs([...next, { role: 'model', text: 'Sem conexão. Tente de novo.', erro: true }]);
