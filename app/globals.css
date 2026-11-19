@@ -60,3 +60,14 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .chat .ouvir button { background: var(--line); color: var(--text); padding: 6px 12px; font-weight: 500; font-size: .9rem; }
 .ouvir-erro { color: #ffb4bc; font-size: .85rem; }
 .audio-msg { display: block; width: 100%; margin-top: 8px; }
+
+/* Lista de conversas salvas */
+.barra-conversas { display: flex; gap: 8px; }
+.chat .barra-conversas button { flex: 1; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 10px; font-weight: 500; }
+.lista-conversas { display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px; max-height: 55vh; overflow-y: auto; }
+.item-conversa { display: flex; gap: 6px; align-items: stretch; }
+.chat .item-conversa .abrir { flex: 1; display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: none; color: var(--text); border: 1px solid var(--line); padding: 8px 10px; font-weight: 400; }
+.item-conversa.atual .abrir { border-color: #7c5cff; }
+.item-conversa .titulo { font-weight: 600; }
+.item-conversa .quando { color: var(--muted); font-size: .8rem; }
+.chat .item-conversa .apagar { background: none; border: 1px solid var(--line); padding: 0 10px; }

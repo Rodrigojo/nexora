@@ -9,3 +9,7 @@ alter table mensagens enable row level security;
 create policy "ver as minhas" on mensagens for select using (auth.uid() = user_id);
 create policy "criar as minhas" on mensagens for insert with check (auth.uid() = user_id);
 create policy "apagar as minhas" on mensagens for delete using (auth.uid() = user_id);
+
+-- 2026-11-18: várias conversas por usuário (lista de conversas salvas)
+alter table mensagens add column if not exists conversa text not null default 'antiga';
+create index if not exists mensagens_conversa on mensagens (user_id, conversa, id);
