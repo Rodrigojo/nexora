@@ -44,7 +44,7 @@ function Ouvir({ texto, auto }) {
   if (src) return <audio className="audio-msg" controls autoPlay src={src} />;
   return (
     <div className="ouvir">
-      <button type="button" onClick={gerar} disabled={estado === 'gerando'}>{estado === 'gerando' ? 'Gerando áudio…' : '🔊 Ouvir'}</button>
+      <button type="button" onClick={gerar} disabled={estado === 'gerando'}>{estado === 'gerando' ? 'Gerando áudio… (até 30 s)' : '🔊 Ouvir'}</button>
       {estado && estado !== 'gerando' && <span className="ouvir-erro">{estado}</span>}
     </div>
   );
@@ -77,7 +77,7 @@ export default function Chat() {
   // Carrega histórico: da nuvem se logado, senão do aparelho
   useEffect(() => {
     if (usuario) {
-      supabase.from('mensagens').select('role, texto').order('criado_em', { ascending: false }).limit(40)
+      supabase.from('mensagens').select('role, texto').order('id', { ascending: false }).limit(40)
         .then(({ data }) => { if (data) setMsgs(data.reverse().map((m) => ({ role: m.role, text: m.texto }))); });
     } else {
       try { setMsgs(JSON.parse(localStorage.getItem(KEY)) || []); } catch { setMsgs([]); }
