@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 7, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -149,4 +149,14 @@ test('vídeo: pedido é reconhecido e roteiro JSON é lido', () => {
   assert.equal(r.cenas.length, 2);
   assert.match(r.cenas[0].prompt, /realistic/i);
   assert.equal(lerRoteiro('nada'), null);
+});
+
+test('avatar: pedido com foto e estilos', async () => {
+  const { pedidoAvatar } = await import('../lib/core/router.js');
+  const { estilosDoPedido } = await import('../lib/ai/avatar.js');
+  assert.ok(pedidoAvatar('faz meu avatar'));
+  assert.ok(pedidoAvatar('me transforma em personagem de anime'));
+  assert.ok(!pedidoAvatar('o que tem nessa foto?'));
+  assert.equal(estilosDoPedido('faz meu avatar').length, 4);
+  assert.equal(estilosDoPedido('versão anime')[0].nome, 'Anime');
 });

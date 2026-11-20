@@ -1,5 +1,6 @@
 import { gerarImagem, editarFoto } from '../../../lib/ai/imagem.js';
 import { promptCena, promptPersonagem } from '../../../lib/ai/video.js';
+import { promptAvatar } from '../../../lib/ai/avatar.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -14,7 +15,7 @@ export async function POST(req) {
   const conta = { accountId: process.env.CLOUDFLARE_ACCOUNT_ID, token: process.env.CLOUDFLARE_API_TOKEN };
   try {
     const r = ref
-      ? await editarFoto({ ...conta, refB64: ref, prompt: input.personagem ? promptPersonagem(prompt) : promptCena(prompt, input.produto) })
+      ? await editarFoto({ ...conta, refB64: ref, prompt: input.avatar ? promptAvatar(prompt) : input.personagem ? promptPersonagem(prompt) : promptCena(prompt, input.produto) })
       : await gerarImagem({ ...conta, prompt, steps: 8 });
     return Response.json(r);
   } catch (e) {

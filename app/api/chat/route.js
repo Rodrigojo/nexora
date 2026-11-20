@@ -1,10 +1,11 @@
-import { detectIntent, unavailableMessage, pedidoEdicao } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
 import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
 import { roteiroVideo } from '../../../lib/ai/video.js';
+import { estilosDoPedido } from '../../../lib/ai/avatar.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -56,6 +57,10 @@ export async function POST(req) {
       const msgs = { SEM_CHAVE: 'A criação de vídeos ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.', TEMPO: 'Demorou demais. Tente de novo.' };
       return Response.json({ erro: msgs[e.message] || 'Não consegui criar o vídeo agora.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
+  }
+  // Avatares (capacidade 7): o celular pede cada estilo em /api/cena com a foto.
+  if (img.imagem?.ref && !input.produto && pedidoAvatar(last)) {
+    return Response.json({ resposta: '🧑‍🎨 **Seus avatares**', avatares: estilosDoPedido(last), capacidade: 7, ia: true });
   }
   const editar = img.imagem?.ref && (pedidoEdicao(last) || Boolean(input.produto));
   const intent = img.imagem ? { capability: getCapability(editar ? 4 : 23), disponivel: true } : detectIntent(last);
