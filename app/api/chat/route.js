@@ -35,7 +35,7 @@ export async function POST(req) {
       const conta = { accountId: process.env.CLOUDFLARE_ACCOUNT_ID, token: process.env.CLOUDFLARE_API_TOKEN };
       const r = cap.id === 4
         ? await editarFoto({ ...conta, refB64: img.imagem.ref,
-            prompt: `Keep the product/subject from image 0 exactly as it is (same shape, label, text and colors). ${prompt}` })
+            prompt: `Keep the product/subject from image 0 exactly as it is: same shape, same colors, and copy the printed label text letter by letter without changing, adding or misspelling any letter${typeof input.produto === 'string' ? ` (the product name printed on it is "${input.produto.slice(0, 40)}")` : ''}. Keep the product sharp and large in the frame. ${prompt}` })
         : await gerarImagem({ prompt, ...conta });
       return Response.json({ resposta: 'Aqui está a sua imagem. Toque nela para salvar no celular.', imagemGerada: r, capacidade: cap.id, ia: true });
     } catch (e) {
