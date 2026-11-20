@@ -4,7 +4,7 @@ import Texto from './Texto';
 import Conta from './Conta';
 import Video from './Video';
 import Midia from './Midia';
-import { novoId, guardar, lerMarca } from '../lib/db/midia.js';
+import { novoId as idMidia, guardar, lerMarca } from '../lib/db/midia.js';
 import { pedidoVideo } from '../lib/core/router.js';
 import { supabase } from '../lib/db/supabase.js';
 import { pedidoSalvarProduto, acharProduto } from '../lib/core/produtos.js';
@@ -226,7 +226,7 @@ export default function Chat() {
       const d = await r.json();
       if (d.resposta) {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
-        const midiaId = d.video || gerada ? novoId() : undefined;
+        const midiaId = d.video || gerada ? idMidia() : undefined;
         if (gerada) fetch(gerada).then((r) => r.blob()).then((b) => guardar(midiaId, b)).catch(() => {});
         const marca = d.video ? `🎬 [vídeo criado #${midiaId}]` : gerada ? `🖼️ [imagem criada #${midiaId}]` : null;
         setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, refFoto: d.video?.comFoto ? img?.ref : undefined, produtoNome: produto?.nome }]);
