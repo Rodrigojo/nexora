@@ -1,4 +1,4 @@
-import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
@@ -56,6 +56,10 @@ export async function POST(req) {
       const msgs = { SEM_CHAVE: 'A criação de sites ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.' };
       return Response.json({ erro: msgs[e.message] || 'Não consegui criar o site agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
+  }
+  // Edição de vídeo (capacidade 12): tudo acontece no celular, sem gastar limite.
+  if (!img.imagem && pedidoEditarVideo(last)) {
+    return Response.json({ resposta: '✂️ **Editor de vídeo**\n\nEscolha o vídeo do celular e ajuste: cortar começo e fim, velocidade, texto na tela, filtro e som.', editorVideo: true, capacidade: 12, ia: true });
   }
   // Apresentador virtual (capacidade 8): fala + legendas; o celular anima a foto (ou cria um apresentador).
   if (!input.produto && pedidoApresentador(last)) {

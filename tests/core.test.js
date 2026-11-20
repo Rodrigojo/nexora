@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAPABILITIES, VERSION_1 } from '../lib/core/capabilities.js';
-import { detectIntent, pedidoEdicao } from '../lib/core/router.js';
+import { detectIntent, pedidoEdicao, pedidoEditarVideo } from '../lib/core/router.js';
 
 test('as 25 capacidades estão registradas, com ids únicos de 1 a 25', () => {
   assert.equal(CAPABILITIES.length, 25);
@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -187,4 +187,14 @@ test('apresentador: pedido e fala do usuário', async () => {
   const r = await roteiroApresentador({ pedido: 'apresentador: Olá pessoal, hoje chegaram novidades lindas na Bela Pele, venham conferir!' });
   assert.ok(r.narracao.startsWith('Olá pessoal'));
   assert.ok(r.cenas.length >= 2 && r.apresentador);
+});
+
+test('edição de vídeo: pedido reconhecido e não vira vídeo novo', () => {
+  for (const t of ['edite meu vídeo', 'quero cortar o vídeo', 'faz uma edição no meu vídeo', 'acelera esse vídeo', 'editor de vídeo']) {
+    assert.equal(pedidoEditarVideo(t), true, t);
+    assert.equal(detectIntent(t).capability.id, 12, t);
+    assert.equal(pedidoVideo(t), false, t);
+  }
+  assert.equal(pedidoEditarVideo('crie um vídeo da minha loja'), false);
+  assert.equal(detectIntent('crie um vídeo da minha loja').capability.id, 5);
 });
