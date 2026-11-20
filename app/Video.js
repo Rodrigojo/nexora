@@ -88,7 +88,7 @@ export default function Video({ video, refFoto, produto }) {
         dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
         dur = Math.max(dur, buf.duration + 0.8);
       }
-      const tipo = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+      const tipo = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,opus', 'video/mp4;codecs=avc1,mp4a', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
       const rec = new MediaRecorder(stream, { ...(tipo ? { mimeType: tipo } : {}), videoBitsPerSecond: 3_000_000 });
       const partes = [];
@@ -97,7 +97,7 @@ export default function Video({ video, refFoto, produto }) {
       setEstado('gravando');
       const porCena = dur / imgs.length;
       quadro(ctx, imgs[0], 0, 0, lista[0].legenda);
-      rec.start(500);
+      rec.start(); // sem fatias: o arquivo sai inteiro e a galeria lê a duração certa
       fonte?.start();
       const t0 = performance.now();
       await new Promise((ok) => {
