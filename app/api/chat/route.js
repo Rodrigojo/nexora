@@ -1,4 +1,4 @@
-import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo, pedidoAutomacao } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
@@ -7,6 +7,7 @@ import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.
 import { roteiroVideo, roteiroFoto, roteiroApresentador } from '../../../lib/ai/video.js';
 import { estilosDoPedido } from '../../../lib/ai/avatar.js';
 import { criarSite } from '../../../lib/ai/site.js';
+import { criarAutomacao, automacaoEmTexto } from '../../../lib/ai/automacao.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -55,6 +56,16 @@ export async function POST(req) {
       console.error('site_error', e.message);
       const msgs = { SEM_CHAVE: 'A criação de sites ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.' };
       return Response.json({ erro: msgs[e.message] || 'Não consegui criar o site agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
+    }
+  }
+  // Automação (capacidade 19): kit pronto de mensagens automáticas para o WhatsApp Business.
+  if (!img.imagem && pedidoAutomacao(last)) {
+    try {
+      const a = await criarAutomacao({ pedido: last, apiKey: process.env.GEMINI_API_KEY });
+      return Response.json({ resposta: automacaoEmTexto(a), automacao: a, capacidade: 19, ia: true });
+    } catch (e) {
+      console.error('automacao_error', e.message);
+      return Response.json({ erro: e.message === 'LIMITE' ? 'Limite de hoje atingido. Tente amanhã.' : 'Não consegui montar a automação agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
   }
   // Edição de vídeo (capacidade 12): tudo acontece no celular, sem gastar limite.

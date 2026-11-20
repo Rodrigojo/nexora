@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -197,4 +197,13 @@ test('edição de vídeo: pedido reconhecido e não vira vídeo novo', () => {
   }
   assert.equal(pedidoEditarVideo('crie um vídeo da minha loja'), false);
   assert.equal(detectIntent('crie um vídeo da minha loja').capability.id, 5);
+});
+
+test('automação: pedido e leitura do kit', async () => {
+  const { lerAutomacao, automacaoEmTexto } = await import('../lib/ai/automacao.js');
+  for (const t of ['automatize o atendimento da minha loja', 'quero mensagens automáticas no whatsapp', 'crie respostas rápidas para meus clientes']) assert.equal(detectIntent(t).capability.id, 19, t);
+  const a = lerAutomacao('```json\n{"titulo":"Kit","resumo":"r","mensagens":[{"nome":"Saudação","texto":"Oi!"},{"nome":"x"}],"passos":["a"]}\n```');
+  assert.equal(a.mensagens.length, 1);
+  assert.match(automacaoEmTexto(a), /Saudação/);
+  assert.equal(lerAutomacao('nada'), null);
 });
