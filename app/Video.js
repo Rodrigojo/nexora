@@ -37,26 +37,29 @@ function quadro(ctx, img, p, idx, legenda, alpha = 1) {
   linhas.forEach((l, i) => ctx.fillText(l, W / 2, y0 + 22 + i * 66));
 }
 
-export default function Video({ video }) {
+export default function Video({ video, refFoto, produto }) {
   const [estado, setEstado] = useState('narracao'); // narracao | pronto | gravando | feito | erro
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState(null);
   const [ext, setExt] = useState('mp4');
   const [aviso, setAviso] = useState('');
   const somB64 = useRef(null);
+  const cenas = useRef([]);
   const iniciou = useRef(false);
 
   useEffect(() => {
     let vivo = true;
     (async () => {
-      if (video.narracao) {
-        try {
-          const r = await fetch('/api/voz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: video.narracao }) });
-          const d = await r.json();
-          if (d.audio) somB64.current = d.audio; else setAviso('Sem narração desta vez (limite de voz). O vídeo sai só com legendas.');
-        } catch { setAviso('Sem narração desta vez. O vídeo sai só com legendas.'); }
-      }
-      if (vivo) { setEstado('pronto'); montar(true); }
+      const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).then((r) => r.json());
+      const voz = video.narracao ? post('/api/voz', { texto: video.narracao }).catch(() => ({})) : Promise.resolve({});
+      const feitas = await Promise.all(video.cenas.map((c) => post('/api/cena', { prompt: c.prompt, ref: refFoto || undefined, produto })
+        .then((d) => (d.imagem ? { ...d, legenda: c.legenda } : null)).catch(() => null)));
+      cenas.current = feitas.filter(Boolean);
+      const d = await voz;
+      if (d.audio) somB64.current = d.audio; else if (video.narracao) setAviso('Sem narração desta vez. O vídeo sai só com legendas.');
+      if (!vivo) return;
+      if (cenas.current.length < 2) { setAviso('Não consegui criar as cenas agora (talvez o limite de imagens de hoje). Tente mais tarde.'); setEstado('erro'); return; }
+      setEstado('pronto'); montar(true);
     })();
     return () => { vivo = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -65,7 +68,8 @@ export default function Video({ video }) {
     if (iniciou.current) return;
     iniciou.current = true;
     try {
-      const imgs = await Promise.all(video.cenas.map((c) => carregar(`data:${c.mime};base64,${c.imagem}`)));
+      const lista = cenas.current;
+      const imgs = await Promise.all(lista.map((c) => carregar(`data:${c.mime};base64,${c.imagem}`)));
       const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
       const ctx = cv.getContext('2d');
       const stream = cv.captureStream(FPS);
@@ -92,7 +96,7 @@ export default function Video({ video }) {
       const fim = new Promise((ok) => { rec.onstop = ok; });
       setEstado('gravando');
       const porCena = dur / imgs.length;
-      quadro(ctx, imgs[0], 0, 0, video.cenas[0].legenda);
+      quadro(ctx, imgs[0], 0, 0, lista[0].legenda);
       rec.start(500);
       fonte?.start();
       const t0 = performance.now();
@@ -104,7 +108,7 @@ export default function Video({ video }) {
           const p = (t - i * porCena) / porCena;
           ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
           if (i > 0 && p < 0.12) { quadro(ctx, imgs[i - 1], 1, i - 1, '', 1); quadro(ctx, imgs[i], p, i, '', p / 0.12); }
-          else quadro(ctx, imgs[i], p, i, video.cenas[i].legenda);
+          else quadro(ctx, imgs[i], p, i, lista[i].legenda);
           setPct(Math.round((t / dur) * 100));
           requestAnimationFrame(passo);
         };
@@ -122,7 +126,7 @@ export default function Video({ video }) {
 
   return (
     <div className="video-box">
-      {estado === 'narracao' && <p className="hint">Gerando a narração… (até 30 s)</p>}
+      {estado === 'narracao' && <p className="hint">Criando as cenas e a narração… (até 40 s)</p>}
       {estado === 'pronto' && <button type="button" onClick={() => montar(false)}>🎬 Montar vídeo</button>}
       {estado === 'gravando' && <p className="hint">Montando o vídeo… {pct}% (deixe esta tela aberta)</p>}
       {estado === 'feito' && url && (

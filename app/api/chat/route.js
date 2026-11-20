@@ -4,7 +4,7 @@ import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
 import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
-import { roteiroVideo, cenasVideo } from '../../../lib/ai/video.js';
+import { roteiroVideo } from '../../../lib/ai/video.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -47,12 +47,10 @@ export async function POST(req) {
   // Vídeo (capacidade 5): roteiro + cenas aqui; o celular junta com a narração e grava o vídeo.
   if (input.video || (!img.imagem && detectIntent(last).capability.id === 5)) {
     try {
-      const conta = { accountId: process.env.CLOUDFLARE_ACCOUNT_ID, token: process.env.CLOUDFLARE_API_TOKEN };
       const pedido = last.replace(/^📷 \[foto\] /, '');
       const roteiro = await roteiroVideo({ pedido, apiKey: process.env.GEMINI_API_KEY });
-      const cenas = await cenasVideo({ roteiro, refB64: img.imagem?.ref, produto: input.produto, ...conta });
-      return Response.json({ resposta: `🎬 **${roteiro.titulo}**\n\nMontando o vídeo com ${cenas.length} cenas e narração…`,
-        video: { titulo: roteiro.titulo, narracao: roteiro.narracao, cenas }, capacidade: 5, ia: true });
+      return Response.json({ resposta: `🎬 **${roteiro.titulo}**`, video: { ...roteiro, comFoto: Boolean(img.imagem?.ref) },
+        capacidade: 5, ia: true });
     } catch (e) {
       console.error('video_error', e.message);
       const msgs = { SEM_CHAVE: 'A criação de vídeos ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.', TEMPO: 'Demorou demais. Tente de novo.' };

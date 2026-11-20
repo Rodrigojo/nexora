@@ -169,7 +169,7 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, ...m }) => m))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, refFoto, ...m }) => m))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -224,7 +224,7 @@ export default function Chat() {
       const d = await r.json();
       if (d.resposta) {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
-        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada, video: d.video }]);
+        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada, video: d.video, refFoto: d.video?.comFoto ? img?.ref : undefined, produtoNome: produto?.nome }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.video ? '🎬 [vídeo criado]' : gerada ? '🖼️ [imagem criada]' : d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
@@ -310,7 +310,7 @@ export default function Chat() {
                 <img src={m.gerada} alt="Imagem criada pela NEXORA" className="imagem-gerada" />
               </a>
             )}
-            {m.video && <Video video={m.video} />}
+            {m.video && <Video video={m.video} refFoto={m.refFoto} produto={m.produtoNome} />}
             {m.role === 'model' && !m.erro && !m.gerada && !m.video && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
           </div>
         ))}
