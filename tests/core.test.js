@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -93,4 +93,15 @@ test('voz: pede áudio ao Gemini e devolve WAV', async () => {
   const r = await narrar({ texto: 'Oi', apiKey: 'k', fetchImpl: fake });
   assert.deepEqual(body.generationConfig.responseModalities, ['AUDIO']);
   assert.equal(Buffer.from(r.audio, 'base64').length, 54);
+});
+
+import { gerarImagem } from '../lib/ai/imagem.js';
+test('imagem: pedido detectado e Cloudflare chamado', async () => {
+  assert.equal(detectIntent('Crie uma imagem de um gato astronauta').capability.id, 3);
+  let url = '';
+  const fake = async (u) => { url = u; return { ok: true, status: 200, json: async () => ({ result: { image: 'QUJD' }, success: true }) }; };
+  const r = await gerarImagem({ prompt: 'cat', accountId: 'abc', token: 't', fetchImpl: fake });
+  assert.equal(r.imagem, 'QUJD');
+  assert.ok(url.includes('/accounts/abc/ai/run/@cf/black-forest-labs/flux-1-schnell'));
+  await assert.rejects(() => gerarImagem({ prompt: 'x', fetchImpl: fake }), /SEM_CHAVE/);
 });

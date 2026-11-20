@@ -140,8 +140,9 @@ export default function Chat() {
       });
       const d = await r.json();
       if (d.resposta) {
-        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9 }]);
-        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.resposta }]);
+        const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
+        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada }]);
+        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: gerada ? '🖼️ [imagem criada]' : d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
       }
@@ -181,12 +182,17 @@ export default function Chat() {
         </div>
       )}
       <div className="msgs">
-        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… ou toque em 📷 para analisar uma foto.</p>}
+        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" ou toque em 📷 para analisar uma foto.</p>}
         {msgs.map((m, i) => (
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
             {m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
-            {m.role === 'model' && !m.erro && <Ouvir texto={m.text} auto={m.narrar} />}
+            {m.gerada && (
+              <a href={m.gerada} download="nexora-imagem.jpg">
+                <img src={m.gerada} alt="Imagem criada pela NEXORA" className="imagem-gerada" />
+              </a>
+            )}
+            {m.role === 'model' && !m.erro && !m.gerada && <Ouvir texto={m.text} auto={m.narrar} />}
           </div>
         ))}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}

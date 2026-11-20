@@ -2,6 +2,7 @@ import { detectIntent, unavailableMessage } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage } from '../../../lib/core/validate.js';
+import { gerarImagem, promptEmIngles } from '../../../lib/ai/imagem.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -25,6 +26,17 @@ export async function POST(req) {
   const cap = intent.capability;
   if (!intent.disponivel && cap.versao > 1) {
     return Response.json({ resposta: unavailableMessage(cap), capacidade: cap.id, ia: false });
+  }
+  if (cap.id === 3) {
+    try {
+      const prompt = await promptEmIngles({ texto: last, apiKey: process.env.GEMINI_API_KEY });
+      const r = await gerarImagem({ prompt, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, token: process.env.CLOUDFLARE_API_TOKEN });
+      return Response.json({ resposta: 'Aqui está a sua imagem. Toque nela para salvar no celular.', imagemGerada: r, capacidade: 3, ia: true });
+    } catch (e) {
+      console.error('imagem_error', e.message);
+      const msgs = { SEM_CHAVE: 'A criação de imagens ainda não está conectada.', LIMITE: 'Limite de imagens de hoje atingido. Tente amanhã.', TEMPO: 'A imagem demorou demais. Tente de novo.' };
+      return Response.json({ erro: msgs[e.message] || 'Não consegui criar a imagem agora.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
+    }
   }
   try {
     const { text } = await askGemini({ history: check.history, cap, imagem: img.imagem, apiKey: process.env.GEMINI_API_KEY });

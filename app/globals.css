@@ -71,3 +71,5 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 .item-conversa .titulo { font-weight: 600; }
 .item-conversa .quando { color: var(--muted); font-size: .8rem; }
 .chat .item-conversa .apagar { background: none; border: 1px solid var(--line); padding: 0 10px; }
+
+.imagem-gerada { display: block; width: 100%; max-width: 420px; border-radius: 12px; margin-top: 8px; }
