@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import Texto from './Texto';
 import Conta from './Conta';
 import Video from './Video';
+import Midia from './Midia';
+import { novoId, guardar, lerMarca } from '../lib/db/midia.js';
 import { pedidoVideo } from '../lib/core/router.js';
 import { supabase } from '../lib/db/supabase.js';
 import { pedidoSalvarProduto, acharProduto } from '../lib/core/produtos.js';
@@ -169,7 +171,7 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, refFoto, ...m }) => m))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, refFoto, ...m }) => (m.marca ? { ...m, text: m.marca } : m)))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -224,8 +226,11 @@ export default function Chat() {
       const d = await r.json();
       if (d.resposta) {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
-        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada, video: d.video, refFoto: d.video?.comFoto ? img?.ref : undefined, produtoNome: produto?.nome }]);
-        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.video ? '🎬 [vídeo criado]' : gerada ? '🖼️ [imagem criada]' : d.resposta }]);
+        const midiaId = d.video || gerada ? novoId() : undefined;
+        if (gerada) fetch(gerada).then((r) => r.blob()).then((b) => guardar(midiaId, b)).catch(() => {});
+        const marca = d.video ? `🎬 [vídeo criado #${midiaId}]` : gerada ? `🖼️ [imagem criada #${midiaId}]` : null;
+        setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, refFoto: d.video?.comFoto ? img?.ref : undefined, produtoNome: produto?.nome }]);
+        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: marca || d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
       }
@@ -300,20 +305,21 @@ export default function Chat() {
       )}
       <div className="msgs">
         {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" ou "crie um vídeo de…", toque em 📷 para analisar uma foto, ou em 🎤 para gravar um áudio e traduzir.</p>}
-        {msgs.map((m, i) => (
+        {msgs.map((m, i) => { const guardado = !m.gerada && !m.video ? lerMarca(m.text) : null; return (
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
             {m.somUrl && <audio className="audio-msg" controls src={m.somUrl} />}
-            {m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
+            {guardado ? <p>{guardado.tipo === 'video' ? '🎬 Vídeo criado' : '🖼️ Imagem criada'}</p> : m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
+            {guardado && <Midia id={guardado.id} tipo={guardado.tipo} />}
             {m.gerada && (
               <a href={m.gerada} download="nexora-imagem.jpg">
                 <img src={m.gerada} alt="Imagem criada pela NEXORA" className="imagem-gerada" />
               </a>
             )}
-            {m.video && <Video video={m.video} refFoto={m.refFoto} produto={m.produtoNome} />}
-            {m.role === 'model' && !m.erro && !m.gerada && !m.video && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
+            {m.video && <Video video={m.video} refFoto={m.refFoto} produto={m.produtoNome} midiaId={m.midiaId} />}
+            {m.role === 'model' && !m.erro && !m.gerada && !m.video && !guardado && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
           </div>
-        ))}
+        ); })}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}
         <div ref={end} />
       </div>

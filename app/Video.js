@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { guardar } from '../lib/db/midia.js';
 
 const W = 720, H = 1280, FPS = 30;
 
@@ -49,7 +50,7 @@ function quadro(ctx, img, p, idx, legenda, alpha = 1) {
   linhas.forEach((l, i) => ctx.fillText(l, W / 2, y0 + 22 + i * 66));
 }
 
-export default function Video({ video, refFoto, produto }) {
+export default function Video({ video, refFoto, produto, midiaId }) {
   const [estado, setEstado] = useState('narracao'); // narracao | pronto | gravando | feito | erro
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState(null);
@@ -140,6 +141,7 @@ export default function Video({ video, refFoto, produto }) {
       const blob = new Blob(partes, { type: (rec.mimeType || tipo || 'video/webm').split(';')[0] });
       setExt(blob.type.includes('mp4') ? 'mp4' : 'webm');
       setUrl(URL.createObjectURL(blob)); setEstado('feito');
+      if (midiaId) guardar(midiaId, blob);
     } catch (e) {
       console.error(e); setAviso(`Não consegui montar o vídeo neste aparelho. (código: ${String(e?.name || e?.message || e).slice(0, 40)})`); setEstado('erro');
     }
