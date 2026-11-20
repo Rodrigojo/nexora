@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -178,4 +178,13 @@ test('animar foto x avatar anime', async () => {
   assert.ok(pedidoAnimar('dá vida a essa foto'));
   assert.ok(!pedidoAnimar('faz meu avatar estilo anime'));
   assert.ok(pedidoAvatar('faz meu avatar estilo anime'));
+});
+
+test('apresentador: pedido e fala do usuário', async () => {
+  const { detectIntent } = await import('../lib/core/router.js');
+  const { roteiroApresentador } = await import('../lib/ai/video.js');
+  assert.equal(detectIntent('crie um vídeo com um apresentador falando da minha loja').capability.id, 8);
+  const r = await roteiroApresentador({ pedido: 'apresentador: Olá pessoal, hoje chegaram novidades lindas na Bela Pele, venham conferir!' });
+  assert.ok(r.narracao.startsWith('Olá pessoal'));
+  assert.ok(r.cenas.length >= 2 && r.apresentador);
 });

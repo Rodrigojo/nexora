@@ -31,15 +31,8 @@ function quebrar(ctx, texto, largura) {
 }
 
 /** Desenha um quadro: imagem cobrindo a tela vertical, com zoom e deslize, e a legenda embaixo. */
-function quadro(ctx, img, p, idx, legenda, alpha = 1) {
-  const z = [1.05 + 0.15 * p, 1.14, 1.22 - 0.15 * p][idx % 3]; // aproxima, desliza, afasta
-  const escala = Math.max(W / img.width, H / img.height) * z;
-  const w = img.width * escala, h = img.height * escala;
-  const folga = w - W;
-  const x = idx % 2 === 0 ? -folga * p : -folga * (1 - p); // alterna o lado do deslize
-  ctx.globalAlpha = alpha;
-  ctx.drawImage(img, x, (H - h) / 2, w, h);
-  ctx.globalAlpha = 1;
+function quadro(ctx, img, p, idx, legenda, alpha = 1, soLegenda = false) {
+  if (!soLegenda) desenhar(ctx, img, p, idx, alpha);
   if (!legenda || alpha < 1) return;
   ctx.font = 'bold 52px sans-serif';
   const linhas = quebrar(ctx, legenda, W - 120);
@@ -49,6 +42,17 @@ function quadro(ctx, img, p, idx, legenda, alpha = 1) {
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(40, y0, W - 80, alto, 24) : ctx.rect(40, y0, W - 80, alto); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   linhas.forEach((l, i) => ctx.fillText(l, W / 2, y0 + 22 + i * 66));
+}
+
+function desenhar(ctx, img, p, idx, alpha) {
+  const z = [1.05 + 0.15 * p, 1.14, 1.22 - 0.15 * p][idx % 3]; // aproxima, desliza, afasta
+  const escala = Math.max(W / img.width, H / img.height) * z;
+  const w = img.width * escala, h = img.height * escala;
+  const folga = w - W;
+  const x = idx % 2 === 0 ? -folga * p : -folga * (1 - p); // alterna o lado do deslize
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, x, (H - h) / 2, w, h);
+  ctx.globalAlpha = 1;
 }
 
 export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) {
@@ -95,7 +99,7 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
       const d = await voz;
       if (d.audio) somB64.current = d.audio; else if (video.narracao) setAviso('Sem narração desta vez. O vídeo sai só com legendas.');
       if (!vivo) return;
-      if (cenas.current.length < 2) { setAviso('Não consegui criar as cenas agora (talvez o limite de imagens de hoje). Tente mais tarde.'); setEstado('erro'); return; }
+      if (cenas.current.length < (video.apresentador ? 1 : 2)) { setAviso('Não consegui criar as cenas agora (talvez o limite de imagens de hoje). Tente mais tarde.'); setEstado('erro'); return; }
       setEstado('pronto'); montar(true);
     })();
     return () => { vivo = false; };
@@ -110,7 +114,7 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
       const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
       const ctx = cv.getContext('2d');
       const stream = cv.captureStream(FPS);
-      let ac = null, fonte = null, dur = imgs.length * 3;
+      let ac = null, fonte = null, analisador = null, dur = imgs.length * 3;
       if (somB64.current) {
         ac = new (window.AudioContext || window.webkitAudioContext)();
         await ac.resume().catch(() => {});
@@ -123,7 +127,8 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
         const dest = ac.createMediaStreamDestination();
         fonte.connect(dest);
         dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-        dur = Math.max(dur, buf.duration + 0.8);
+        if (video.apresentador) { analisador = ac.createAnalyser(); analisador.fftSize = 512; fonte.connect(analisador); }
+        dur = video.apresentador ? buf.duration + 0.8 : Math.max(dur, buf.duration + 0.8);
       }
       const tipo = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,opus', 'video/mp4;codecs=avc1,mp4a', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
@@ -144,7 +149,16 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
           const i = Math.min(imgs.length - 1, Math.floor(t / porCena));
           const p = (t - i * porCena) / porCena;
           ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-          if (i > 0 && p < 0.12) { quadro(ctx, imgs[i - 1], 1, i - 1, '', 1); quadro(ctx, imgs[i], p, i, '', p / 0.12); }
+          if (video.apresentador) {
+            // Apresentador: a imagem "respira" com a voz e as legendas seguem a fala.
+            let amp = 0;
+            if (analisador) { const a = new Uint8Array(analisador.fftSize); analisador.getByteTimeDomainData(a); for (const v of a) amp = Math.max(amp, Math.abs(v - 128) / 128); }
+            const k = 1 + 0.04 * amp;
+            ctx.save(); ctx.translate(W / 2, H * 0.45); ctx.scale(k, k); ctx.translate(-W / 2, -H * 0.45 - 6 * amp);
+            quadro(ctx, imgs[i], t / dur, 0, '');
+            ctx.restore();
+            quadro(ctx, imgs[i], t / dur, 0, lista[i].legenda, 1, true);
+          } else if (i > 0 && p < 0.12) { quadro(ctx, imgs[i - 1], 1, i - 1, '', 1); quadro(ctx, imgs[i], p, i, '', p / 0.12); }
           else quadro(ctx, imgs[i], p, i, lista[i].legenda);
           setPct(Math.round((t / dur) * 100));
           requestAnimationFrame(passo);
@@ -164,7 +178,7 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
 
   return (
     <div className="video-box">
-      {estado === 'narracao' && <p className="hint">{video.animar ? 'Preparando a narração… (até 20 s)' : 'Criando as cenas e a narração… (até 40 s)'}</p>}
+      {estado === 'narracao' && <p className="hint">{video.apresentador ? 'Preparando o apresentador… (até 30 s)' : video.animar ? 'Preparando a narração… (até 20 s)' : 'Criando as cenas e a narração… (até 40 s)'}</p>}
       {estado === 'pronto' && <button type="button" onClick={() => montar(false)}>🎬 Montar vídeo</button>}
       {estado === 'gravando' && <p className="hint">Montando o vídeo… {pct}% (deixe esta tela aberta)</p>}
       {estado === 'feito' && url && (

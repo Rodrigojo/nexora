@@ -233,7 +233,7 @@ export default function Chat() {
         const avIds = d.avatares ? d.avatares.map(() => idMidia()) : undefined;
         if (gerada) fetch(gerada).then((r) => r.blob()).then((b) => guardar(midiaId, b)).catch(() => {});
         const marca = d.site ? `🌐 [site criado #${midiaId}]` : avIds ? `🧑‍🎨 [avatares criados ${avIds.map((x) => '#' + x).join(' ')}]` : d.video ? `🎬 [vídeo criado #${midiaId}]` : gerada ? `🖼️ [imagem criada #${midiaId}]` : null;
-        setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, site: d.site, avatares: d.avatares, avIds, refFoto: d.video?.comFoto || d.avatares ? img?.ref : undefined, fotoAnimar: d.video?.animar && img ? `data:${img.mime};base64,${img.data}` : undefined, produtoNome: produto?.nome }]);
+        setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, site: d.site, avatares: d.avatares, avIds, refFoto: (d.video?.comFoto && !d.video?.apresentador) || d.avatares ? img?.ref : undefined, fotoAnimar: (d.video?.animar || d.video?.apresentador) && img ? `data:${img.mime};base64,${img.data}` : undefined, produtoNome: produto?.nome }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: marca || d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);

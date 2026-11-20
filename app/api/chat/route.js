@@ -1,10 +1,10 @@
-import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
 import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
-import { roteiroVideo, roteiroFoto } from '../../../lib/ai/video.js';
+import { roteiroVideo, roteiroFoto, roteiroApresentador } from '../../../lib/ai/video.js';
 import { estilosDoPedido } from '../../../lib/ai/avatar.js';
 import { criarSite } from '../../../lib/ai/site.js';
 
@@ -55,6 +55,16 @@ export async function POST(req) {
       console.error('site_error', e.message);
       const msgs = { SEM_CHAVE: 'A criação de sites ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.' };
       return Response.json({ erro: msgs[e.message] || 'Não consegui criar o site agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
+    }
+  }
+  // Apresentador virtual (capacidade 8): fala + legendas; o celular anima a foto (ou cria um apresentador).
+  if (!input.produto && pedidoApresentador(last)) {
+    try {
+      const r = await roteiroApresentador({ pedido: last, apiKey: process.env.GEMINI_API_KEY });
+      return Response.json({ resposta: `🎙️ **${r.titulo}**`, video: { ...r, comFoto: Boolean(img.imagem) }, capacidade: 8, ia: true });
+    } catch (e) {
+      console.error('apresentador_error', e.message);
+      return Response.json({ erro: e.message === 'LIMITE' ? 'Limite de hoje atingido. Tente amanhã.' : 'Não consegui criar o apresentador agora.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
   }
   // Animar foto (capacidade 6): roteiro curto a partir da foto; o celular anima a própria foto.
