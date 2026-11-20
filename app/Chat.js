@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Texto from './Texto';
 import Conta from './Conta';
+import Video from './Video';
+import { pedidoVideo } from '../lib/core/router.js';
 import { supabase } from '../lib/db/supabase.js';
 import { pedidoSalvarProduto, acharProduto } from '../lib/core/produtos.js';
 
@@ -167,7 +169,7 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, ...m }) => m))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, ...m }) => m))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -217,13 +219,13 @@ export default function Chat() {
       const hist = next.filter((m) => !m.erro).map((m) => ({ role: m.role, text: m.text }));
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data, ref: img.ref } : undefined, produto: produto?.nome }),
+        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data, ref: img.ref } : undefined, produto: produto?.nome, video: pedidoVideo(t) || undefined }),
       });
       const d = await r.json();
       if (d.resposta) {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
-        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada }]);
-        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: gerada ? '🖼️ [imagem criada]' : d.resposta }]);
+        setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada, video: d.video }]);
+        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.video ? '🎬 [vídeo criado]' : gerada ? '🖼️ [imagem criada]' : d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
       }
@@ -297,7 +299,7 @@ export default function Chat() {
         </div>
       )}
       <div className="msgs">
-        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" toque em 📷 para analisar uma foto, ou em 🎤 para gravar um áudio e traduzir.</p>}
+        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" ou "crie um vídeo de…", toque em 📷 para analisar uma foto, ou em 🎤 para gravar um áudio e traduzir.</p>}
         {msgs.map((m, i) => (
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
@@ -308,7 +310,8 @@ export default function Chat() {
                 <img src={m.gerada} alt="Imagem criada pela NEXORA" className="imagem-gerada" />
               </a>
             )}
-            {m.role === 'model' && !m.erro && !m.gerada && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
+            {m.video && <Video video={m.video} />}
+            {m.role === 'model' && !m.erro && !m.gerada && !m.video && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
           </div>
         ))}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}

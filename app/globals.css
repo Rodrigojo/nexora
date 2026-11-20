@@ -76,3 +76,8 @@ h1 { font-size: 2.4rem; letter-spacing: .18em; background: var(--grad);
 
 .chat .item-conversa .produto { flex-direction: row; align-items: center; gap: 10px; }
 .item-conversa .produto img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
+
+.video-box { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.video-box button { background: var(--line); color: var(--text); padding: 8px 14px; }
+.video-gerado { width: 100%; max-width: 320px; border-radius: 12px; background: #000; }
+.baixar { color: var(--text); font-weight: 600; text-decoration: none; background: var(--line); padding: 8px 14px; border-radius: 10px; }

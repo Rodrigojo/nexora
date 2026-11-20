@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -136,4 +136,16 @@ test('tradução de áudio: lê o formato e valida o áudio', () => {
   assert.equal(validateAudio({ mime: 'audio/webm;codecs=opus', data: 'AAAA' }).ok, true);
   assert.equal(validateAudio({ mime: 'video/mp4', data: 'AAAA' }).ok, false);
   assert.equal(validateAudio(undefined).audio, null);
+});
+
+import { lerRoteiro } from '../lib/ai/video.js';
+import { pedidoVideo } from '../lib/core/router.js';
+test('vídeo: pedido é reconhecido e roteiro JSON é lido', () => {
+  assert.equal(pedidoVideo('Cria um vídeo do Essencial na praia'), true);
+  assert.equal(pedidoVideo('faz uma propaganda em vídeo da minha loja'), true);
+  assert.equal(pedidoVideo('Escreva um roteiro para meu vídeo do TikTok'), false);
+  assert.equal(detectIntent('Crie um vídeo de um café da manhã').disponivel, true);
+  const r = lerRoteiro('```json\n{"titulo":"T","narracao":"oi","cenas":[{"legenda":"a","prompt":"x"},{"legenda":"b","prompt":"y"}]}\n```');
+  assert.equal(r.cenas.length, 2);
+  assert.equal(lerRoteiro('nada'), null);
 });
