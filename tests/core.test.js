@@ -118,3 +118,12 @@ test('foto: editar x analisar', () => {
   assert.equal(pedidoEdicao('O que tem nesta foto?'), false);
   assert.equal(pedidoEdicao('leia o que está escrito'), false);
 });
+
+import { pedidoSalvarProduto, acharProduto } from '../lib/core/produtos.js';
+test('catálogo: entende "salve como" e acha o produto no pedido', () => {
+  assert.equal(pedidoSalvarProduto('salve como Essencial'), 'Essencial');
+  assert.equal(pedidoSalvarProduto('Guarde esta foto como "Perfume Kaiak".'), 'Perfume Kaiak');
+  assert.equal(pedidoSalvarProduto('o que tem nesta foto?'), null);
+  assert.equal(acharProduto('crie uma imagem do essencial na praia', ['Kaiak', 'Essencial']), 'Essencial');
+  assert.equal(acharProduto('crie uma imagem de um gato', ['Essencial']), null);
+});

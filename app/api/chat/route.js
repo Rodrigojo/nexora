@@ -22,7 +22,7 @@ export async function POST(req) {
   if (!img.ok) return Response.json({ erro: img.erro }, { status: 400 });
 
   const last = check.history[check.history.length - 1].text;
-  const editar = img.imagem?.ref && pedidoEdicao(last);
+  const editar = img.imagem?.ref && (pedidoEdicao(last) || Boolean(input.produto));
   const intent = img.imagem ? { capability: getCapability(editar ? 4 : 23), disponivel: true } : detectIntent(last);
   const cap = intent.capability;
   if (!intent.disponivel && cap.versao > 1) {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Texto from './Texto';
 import Conta from './Conta';
 import { supabase } from '../lib/db/supabase.js';
+import { pedidoSalvarProduto, acharProduto } from '../lib/core/produtos.js';
 
 const KEY = 'nexora_conversa';
 const novoId = () => (globalThis.crypto?.randomUUID?.() || `c${Date.now()}${Math.random().toString(36).slice(2)}`);
@@ -65,6 +66,8 @@ export default function Chat() {
   const [foto, setFoto] = useState(null);
   const [conversa, setConversa] = useState(() => novoId());
   const [lista, setLista] = useState(null); // conversas salvas (null = lista fechada)
+  const [produtos, setProdutos] = useState([]); // catálogo: [{id, nome, foto}]
+  const [verProdutos, setVerProdutos] = useState(false);
   const end = useRef(null);
   const arquivo = useRef(null);
 
@@ -87,8 +90,13 @@ export default function Chat() {
   // Sem login: uma conversa guardada só neste aparelho.
   useEffect(() => {
     setLista(null);
-    if (usuario) { setConversa(novoId()); setMsgs([]); }
-    else { try { setMsgs(JSON.parse(localStorage.getItem(KEY)) || []); } catch { setMsgs([]); } }
+    if (usuario) {
+      setConversa(novoId()); setMsgs([]);
+      supabase.from('produtos').select('id, nome, foto').order('id').then(({ data }) => setProdutos(data || []));
+    } else {
+      setProdutos([]);
+      try { setMsgs(JSON.parse(localStorage.getItem(KEY)) || []); } catch { setMsgs([]); }
+    }
   }, [usuario]);
 
   async function abrirLista() {
@@ -130,19 +138,47 @@ export default function Chat() {
     if (usuario) supabase.from('mensagens').insert(linhas.map((l) => ({ ...l, conversa }))).then(() => {});
   };
 
+  async function apagarProduto(p) {
+    if (!confirm(`Apagar o produto "${p.nome}"?`)) return;
+    await supabase.from('produtos').delete().eq('id', p.id);
+    setProdutos((l) => l.filter((x) => x.id !== p.id));
+  }
+
   async function send(e) {
     e.preventDefault();
-    const img = foto;
+    let img = foto;
     const t = text.trim() || (img ? 'O que tem nesta foto?' : '');
     if (!t || busy) return;
-    const tm = img ? `📷 [foto] ${t}` : t;
+    // Catálogo: "salve como Essencial" com foto guarda o produto.
+    const nomeNovo = img && pedidoSalvarProduto(t);
+    if (nomeNovo) {
+      const eu = { role: 'user', text: `📷 [foto] ${t}`, preview: img.preview };
+      if (!usuario) { setMsgs([...msgs, eu, { role: 'model', text: 'Entre na sua conta para salvar produtos.', erro: true }]); setText(''); setFoto(null); return; }
+      setBusy(true); setText(''); setFoto(null);
+      const velho = produtos.find((p) => p.nome.toLowerCase() === nomeNovo.toLowerCase());
+      if (velho) await supabase.from('produtos').delete().eq('id', velho.id);
+      const { data, error } = await supabase.from('produtos').insert({ nome: nomeNovo, foto: img.ref }).select('id, nome, foto').single();
+      setBusy(false);
+      if (error) { setMsgs([...msgs, eu, { role: 'model', text: `Não consegui salvar o produto. (código: ${String(error.message).slice(0, 60)})`, erro: true }]); return; }
+      setProdutos((l) => [...l.filter((p) => p.id !== velho?.id), data]);
+      setMsgs([...msgs, eu, { role: 'model', text: `✅ Produto **${data.nome}** salvo. Agora é só pedir, por exemplo: "crie uma imagem do ${data.nome} na praia".` }]);
+      return;
+    }
+    // Pedido de imagem que cita um produto salvo: usa a foto dele como base.
+    let produto = null;
+    if (!img && produtos.length) {
+      const nome = acharProduto(t, produtos.map((p) => p.nome));
+      produto = nome && produtos.find((p) => p.nome === nome);
+      if (produto) img = { mime: 'image/jpeg', data: produto.foto, ref: produto.foto, produto: true };
+    }
+    const tm = img && !produto ? `📷 [foto] ${t}` : t;
     const next = [...msgs, { role: 'user', text: tm, preview: img?.preview }];
     setMsgs(next); setText(''); setFoto(null); setBusy(true);
     try {
       const hist = next.filter((m) => !m.erro).map((m) => ({ role: m.role, text: m.text }));
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data, ref: img.ref } : undefined }),
+        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data, ref: img.ref } : undefined, produto: produto?.nome }),
       });
       const d = await r.json();
       if (d.resposta) {
@@ -170,6 +206,18 @@ export default function Chat() {
         <div className="barra-conversas">
           <button type="button" onClick={abrirLista}>{lista ? 'Fechar lista' : '📂 Conversas'}</button>
           <button type="button" onClick={novaConversa}>＋ Nova conversa</button>
+          <button type="button" onClick={() => setVerProdutos((v) => !v)}>📦 Produtos</button>
+        </div>
+      )}
+      {verProdutos && (
+        <div className="lista-conversas">
+          {produtos.length === 0 && <p className="hint">Nenhum produto salvo. Toque em 📷, escolha a foto do produto e escreva: salve como Essencial</p>}
+          {produtos.map((p) => (
+            <div key={p.id} className="item-conversa">
+              <div className="abrir produto"><img src={`data:image/jpeg;base64,${p.foto}`} alt="" /><span className="titulo">{p.nome}</span></div>
+              <button type="button" className="apagar" onClick={() => apagarProduto(p)} aria-label="Apagar produto">🗑</button>
+            </div>
+          ))}
         </div>
       )}
       {lista && (
