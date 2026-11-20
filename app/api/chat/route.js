@@ -37,7 +37,7 @@ export async function POST(req) {
         ? await editarFoto({ ...conta, refB64: img.imagem.ref,
             prompt: `Keep the product/subject from image 0 exactly as it is (same shape, label, text and colors). ${prompt}` })
         : await gerarImagem({ prompt, ...conta });
-      return Response.json({ resposta: 'Aqui está a sua imagem. Toque nela para salvar no celular.', imagemGerada: r, capacidade: 3, ia: true });
+      return Response.json({ resposta: 'Aqui está a sua imagem. Toque nela para salvar no celular.', imagemGerada: r, capacidade: cap.id, ia: true });
     } catch (e) {
       console.error('imagem_error', e.message);
       const msgs = { SEM_CHAVE: 'A criação de imagens ainda não está conectada.', LIMITE: 'Limite de imagens de hoje atingido. Tente amanhã.', TEMPO: 'A imagem demorou demais. Tente de novo.' };
