@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 7, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 7, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -159,4 +159,15 @@ test('avatar: pedido com foto e estilos', async () => {
   assert.ok(!pedidoAvatar('o que tem nessa foto?'));
   assert.equal(estilosDoPedido('faz meu avatar').length, 4);
   assert.equal(estilosDoPedido('versão anime')[0].nome, 'Anime');
+});
+
+test('site: pedido e leitura do HTML', async () => {
+  const { detectIntent } = await import('../lib/core/router.js');
+  const { lerHtml, tituloHtml } = await import('../lib/ai/site.js');
+  assert.equal(detectIntent('crie um site para minha barbearia').capability.id, 18);
+  assert.equal(detectIntent('faz uma landing page da minha loja').capability.id, 18);
+  assert.notEqual(detectIntent('me dê ideias de nome para site').capability.id, 18);
+  const h = lerHtml('```html\n<!DOCTYPE html><html><head><title>Loja</title></head></html>\n```');
+  assert.ok(h.startsWith('<!DOCTYPE'));
+  assert.equal(tituloHtml(h), 'Loja');
 });

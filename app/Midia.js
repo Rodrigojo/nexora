@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { pegar } from '../lib/db/midia.js';
+import Site from './Site';
 
 /** Mostra de novo um vídeo ou imagem guardado neste aparelho. */
 export default function Midia({ id, tipo, ids }) {
@@ -10,13 +11,15 @@ export default function Midia({ id, tipo, ids }) {
 
 function Uma({ id, tipo }) {
   const [url, setUrl] = useState(null);
+  const [html, setHtml] = useState(null);
   const [falta, setFalta] = useState(false);
   useEffect(() => {
     let u;
-    pegar(id).then((b) => { if (b) { u = URL.createObjectURL(b); setUrl(u); } else setFalta(true); });
+    pegar(id).then((b) => { if (b && tipo === 'site') b.text().then(setHtml); else if (b) { u = URL.createObjectURL(b); setUrl(u); } else setFalta(true); });
     return () => u && URL.revokeObjectURL(u);
   }, [id]);
   if (falta) return <p className="hint">(Criado em outro aparelho ou navegador.)</p>;
+  if (tipo === 'site') return html ? <Site html={html} /> : null;
   if (!url) return null;
   const ext = tipo === 'video' ? 'mp4' : 'jpg';
   return tipo === 'video' ? (

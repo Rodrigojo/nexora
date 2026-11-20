@@ -6,6 +6,7 @@ import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
 import { roteiroVideo } from '../../../lib/ai/video.js';
 import { estilosDoPedido } from '../../../lib/ai/avatar.js';
+import { criarSite } from '../../../lib/ai/site.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -43,6 +44,17 @@ export async function POST(req) {
       console.error('audio_error', e.message);
       const msg = ERRORS[e.message] || 'Não consegui ouvir o áudio agora. Tente de novo.';
       return Response.json({ erro: msg, codigo: String(e.message).slice(0, 200) }, { status: e.message === 'LIMITE' ? 429 : 502 });
+    }
+  }
+  // Site (capacidade 18): o Gemini escreve a página inteira; o celular mostra a prévia.
+  if (!img.imagem && detectIntent(last).capability.id === 18) {
+    try {
+      const s = await criarSite({ pedido: last, apiKey: process.env.GEMINI_API_KEY });
+      return Response.json({ resposta: `🌐 **${s.titulo}**`, site: s, capacidade: 18, ia: true });
+    } catch (e) {
+      console.error('site_error', e.message);
+      const msgs = { SEM_CHAVE: 'A criação de sites ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.' };
+      return Response.json({ erro: msgs[e.message] || 'Não consegui criar o site agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
   }
   // Vídeo (capacidade 5): roteiro + cenas aqui; o celular junta com a narração e grava o vídeo.

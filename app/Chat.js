@@ -5,6 +5,7 @@ import Conta from './Conta';
 import Video from './Video';
 import Midia from './Midia';
 import Avatares from './Avatares';
+import Site from './Site';
 import { novoId as idMidia, guardar, lerMarca } from '../lib/db/midia.js';
 import { pedidoVideo } from '../lib/core/router.js';
 import { supabase } from '../lib/db/supabase.js';
@@ -172,7 +173,7 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, avatares, refFoto, ...m }) => (m.marca ? { ...m, text: m.marca } : m)))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, video, site, avatares, refFoto, ...m }) => (m.marca ? { ...m, text: m.marca } : m)))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -227,11 +228,12 @@ export default function Chat() {
       const d = await r.json();
       if (d.resposta) {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
-        const midiaId = d.video || gerada ? idMidia() : undefined;
+        const midiaId = d.video || gerada || d.site ? idMidia() : undefined;
+        if (d.site) guardar(midiaId, new Blob([d.site.html], { type: 'text/html' }));
         const avIds = d.avatares ? d.avatares.map(() => idMidia()) : undefined;
         if (gerada) fetch(gerada).then((r) => r.blob()).then((b) => guardar(midiaId, b)).catch(() => {});
-        const marca = avIds ? `🧑‍🎨 [avatares criados ${avIds.map((x) => '#' + x).join(' ')}]` : d.video ? `🎬 [vídeo criado #${midiaId}]` : gerada ? `🖼️ [imagem criada #${midiaId}]` : null;
-        setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, avatares: d.avatares, avIds, refFoto: d.video?.comFoto || d.avatares ? img?.ref : undefined, produtoNome: produto?.nome }]);
+        const marca = d.site ? `🌐 [site criado #${midiaId}]` : avIds ? `🧑‍🎨 [avatares criados ${avIds.map((x) => '#' + x).join(' ')}]` : d.video ? `🎬 [vídeo criado #${midiaId}]` : gerada ? `🖼️ [imagem criada #${midiaId}]` : null;
+        setMsgs([...next, { role: 'model', text: d.resposta, marca, midiaId, narrar: d.capacidade === 9, gerada, video: d.video, site: d.site, avatares: d.avatares, avIds, refFoto: d.video?.comFoto || d.avatares ? img?.ref : undefined, produtoNome: produto?.nome }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: marca || d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
@@ -307,12 +309,13 @@ export default function Chat() {
       )}
       <div className="msgs">
         {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" ou "crie um vídeo de…", toque em 📷 para analisar uma foto, ou em 🎤 para gravar um áudio e traduzir.</p>}
-        {msgs.map((m, i) => { const guardado = !m.gerada && !m.video && !m.avatares ? lerMarca(m.text) : null; return (
+        {msgs.map((m, i) => { const guardado = !m.gerada && !m.video && !m.avatares && !m.site ? lerMarca(m.text) : null; return (
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
             {m.somUrl && <audio className="audio-msg" controls src={m.somUrl} />}
-            {guardado ? <p>{guardado.tipo === 'video' ? '🎬 Vídeo criado' : guardado.tipo === 'avatares' ? '🧑‍🎨 Avatares criados' : '🖼️ Imagem criada'}</p> : m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
+            {guardado ? <p>{guardado.tipo === 'video' ? '🎬 Vídeo criado' : guardado.tipo === 'avatares' ? '🧑‍🎨 Avatares criados' : guardado.tipo === 'site' ? '🌐 Site criado' : '🖼️ Imagem criada'}</p> : m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
             {guardado && <Midia id={guardado.id} ids={guardado.ids} tipo={guardado.tipo} />}
+            {m.site && <Site html={m.site.html} titulo={m.site.titulo} />}
             {m.avatares && <Avatares estilos={m.avatares} refFoto={m.refFoto} ids={m.avIds} />}
             {m.gerada && (
               <a href={m.gerada} download="nexora-imagem.jpg">
@@ -320,7 +323,7 @@ export default function Chat() {
               </a>
             )}
             {m.video && <Video video={m.video} refFoto={m.refFoto} produto={m.produtoNome} midiaId={m.midiaId} />}
-            {m.role === 'model' && !m.erro && !m.gerada && !m.video && !m.avatares && !guardado && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
+            {m.role === 'model' && !m.erro && !m.gerada && !m.video && !m.avatares && !m.site && !guardado && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
           </div>
         ); })}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}
