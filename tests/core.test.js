@@ -147,5 +147,6 @@ test('vídeo: pedido é reconhecido e roteiro JSON é lido', () => {
   assert.equal(detectIntent('Crie um vídeo de um café da manhã').disponivel, true);
   const r = lerRoteiro('```json\n{"titulo":"T","narracao":"oi","cenas":[{"legenda":"a","prompt":"x"},{"legenda":"b","prompt":"y"}]}\n```');
   assert.equal(r.cenas.length, 2);
+  assert.match(r.cenas[0].prompt, /realistic/i);
   assert.equal(lerRoteiro('nada'), null);
 });

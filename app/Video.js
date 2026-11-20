@@ -7,6 +7,18 @@ function carregar(src) {
   return new Promise((ok, falha) => { const i = new Image(); i.onload = () => ok(i); i.onerror = falha; i.src = src; });
 }
 
+/** Cópia pequena (até 510 px) para servir de referência ao modelo de imagem. */
+async function reduzir(src) {
+  try {
+    const img = await carregar(src);
+    const k = Math.min(1, 510 / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    return cv.toDataURL('image/jpeg', 0.9).split(',')[1];
+  } catch { return null; }
+}
+
 function quebrar(ctx, texto, largura) {
   const linhas = []; let atual = '';
   for (const p of String(texto).split(/\s+/)) {
@@ -52,8 +64,17 @@ export default function Video({ video, refFoto, produto }) {
     (async () => {
       const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).then((r) => r.json());
       const voz = video.narracao ? post('/api/voz', { texto: video.narracao }).catch(() => ({})) : Promise.resolve({});
-      const feitas = await Promise.all(video.cenas.map((c) => post('/api/cena', { prompt: c.prompt, ref: refFoto || undefined, produto })
-        .then((d) => (d.imagem ? { ...d, legenda: c.legenda } : null)).catch(() => null)));
+      const cena = (c, extra) => post('/api/cena', { prompt: c.prompt, ...extra })
+        .then((d) => (d.imagem ? { ...d, legenda: c.legenda } : null)).catch(() => null);
+      let feitas;
+      if (refFoto) feitas = await Promise.all(video.cenas.map((c) => cena(c, { ref: refFoto, produto })));
+      else if (video.personagem) {
+        // Mesmo personagem em todas as cenas: a 1ª cena vira a referência das outras.
+        const primeira = await cena(video.cenas[0], {});
+        const ref = primeira && await reduzir(`data:${primeira.mime};base64,${primeira.imagem}`);
+        const resto = await Promise.all(video.cenas.slice(1).map((c) => cena(c, ref ? { ref, personagem: true } : {})));
+        feitas = [primeira, ...resto];
+      } else feitas = await Promise.all(video.cenas.map((c) => cena(c, {})));
       cenas.current = feitas.filter(Boolean);
       const d = await voz;
       if (d.audio) somB64.current = d.audio; else if (video.narracao) setAviso('Sem narração desta vez. O vídeo sai só com legendas.');
