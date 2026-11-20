@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -126,4 +126,14 @@ test('catálogo: entende "salve como" e acha o produto no pedido', () => {
   assert.equal(pedidoSalvarProduto('o que tem nesta foto?'), null);
   assert.equal(acharProduto('crie uma imagem do essencial na praia', ['Kaiak', 'Essencial']), 'Essencial');
   assert.equal(acharProduto('crie uma imagem de um gato', ['Essencial']), null);
+});
+
+import { lerTraducao } from '../lib/ai/traducao.js';
+import { validateAudio } from '../lib/core/validate.js';
+test('tradução de áudio: lê o formato e valida o áudio', () => {
+  const r = lerTraducao('ORIGINAL: Olá, tudo bem?\nIDIOMA: inglês\nTRADUÇÃO: Hi, how are you?');
+  assert.deepEqual(r, { original: 'Olá, tudo bem?', idioma: 'inglês', traducao: 'Hi, how are you?' });
+  assert.equal(validateAudio({ mime: 'audio/webm;codecs=opus', data: 'AAAA' }).ok, true);
+  assert.equal(validateAudio({ mime: 'video/mp4', data: 'AAAA' }).ok, false);
+  assert.equal(validateAudio(undefined).audio, null);
 });

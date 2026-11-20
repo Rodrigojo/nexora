@@ -1,7 +1,8 @@
 import { detectIntent, unavailableMessage, pedidoEdicao } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
-import { validateChat, validateImage } from '../../../lib/core/validate.js';
+import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
+import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
 
 export const runtime = 'nodejs';
@@ -21,7 +22,27 @@ export async function POST(req) {
   const img = validateImage(input.imagem);
   if (!img.ok) return Response.json({ erro: img.erro }, { status: 400 });
 
+  const au = validateAudio(input.audio);
+  if (!au.ok) return Response.json({ erro: au.erro }, { status: 400 });
+
   const last = check.history[check.history.length - 1].text;
+  // Áudio enviado: tradução/dublagem (capacidade 10). O app fala só a tradução.
+  if (au.audio) {
+    try {
+      const pedido = last.replace(/^🎤 \[áudio\]\s*/, '') || 'Traduza este áudio.';
+      const { text } = await askGemini({ history: [{ role: 'user', text: pedido }], audio: au.audio, sistema: SISTEMA_TRADUCAO,
+        temperatura: 0.2, apiKey: process.env.GEMINI_API_KEY });
+      const t = lerTraducao(text);
+      const resposta = t.original
+        ? `🗣️ **Você disse:** ${t.original}\n\n**Tradução${t.idioma ? ` (${t.idioma})` : ''}:** ${t.traducao || '—'}`
+        : t.traducao;
+      return Response.json({ resposta, fala: t.traducao || '', capacidade: 10, ia: true });
+    } catch (e) {
+      console.error('audio_error', e.message);
+      const msg = ERRORS[e.message] || 'Não consegui ouvir o áudio agora. Tente de novo.';
+      return Response.json({ erro: msg, codigo: String(e.message).slice(0, 200) }, { status: e.message === 'LIMITE' ? 429 : 502 });
+    }
+  }
   const editar = img.imagem?.ref && (pedidoEdicao(last) || Boolean(input.produto));
   const intent = img.imagem ? { capability: getCapability(editar ? 4 : 23), disponivel: true } : detectIntent(last);
   const cap = intent.capability;

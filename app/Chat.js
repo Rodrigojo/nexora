@@ -70,6 +70,36 @@ export default function Chat() {
   const [verProdutos, setVerProdutos] = useState(false);
   const end = useRef(null);
   const arquivo = useRef(null);
+  const [audio, setAudio] = useState(null); // { mime, data, segundos, url }
+  const [gravando, setGravando] = useState(0); // segundos gravados (0 = parado)
+  const gravador = useRef(null);
+
+  async function gravar() {
+    if (gravador.current) { gravador.current.stop(); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { alert('Permita o microfone para gravar o áudio.'); return; }
+    const tipo = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+    const rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
+    const partes = [];
+    const inicio = Date.now();
+    const relogio = setInterval(() => {
+      const s = Math.round((Date.now() - inicio) / 1000);
+      setGravando(Math.max(1, s));
+      if (s >= 60) rec.stop(); // máximo 1 minuto
+    }, 500);
+    rec.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+    rec.onstop = () => {
+      clearInterval(relogio); stream.getTracks().forEach((t) => t.stop());
+      gravador.current = null; setGravando(0);
+      const blob = new Blob(partes, { type: (rec.mimeType || tipo || 'audio/webm').split(';')[0] });
+      const segundos = Math.max(1, Math.round((Date.now() - inicio) / 1000));
+      const leitor = new FileReader();
+      leitor.onload = () => setAudio({ mime: blob.type, data: String(leitor.result).split(',')[1], segundos, url: URL.createObjectURL(blob) });
+      leitor.readAsDataURL(blob);
+    };
+    gravador.current = rec; setGravando(1); rec.start();
+  }
 
   async function escolherFoto(e) {
     const f = e.target.files?.[0];
@@ -130,7 +160,7 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, ...m }) => m))); } catch {} }
+    if (!usuario) { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-40).map(({ preview, narrar, somUrl, gerada, ...m }) => m))); } catch {} }
     end.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, usuario]);
 
@@ -147,6 +177,8 @@ export default function Chat() {
   async function send(e) {
     e.preventDefault();
     let img = foto;
+    const som = audio;
+    if (som && !busy) { enviarAudio(som); return; }
     const t = text.trim() || (img ? 'O que tem nesta foto?' : '');
     if (!t || busy) return;
     // Catálogo: "salve como Essencial" com foto guarda o produto.
@@ -185,6 +217,28 @@ export default function Chat() {
         const gerada = d.imagemGerada ? `data:${d.imagemGerada.mime};base64,${d.imagemGerada.imagem}` : null;
         setMsgs([...next, { role: 'model', text: d.resposta, narrar: d.capacidade === 9, gerada }]);
         salvar([{ role: 'user', texto: tm }, { role: 'model', texto: gerada ? '🖼️ [imagem criada]' : d.resposta }]);
+      } else {
+        setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
+      }
+    } catch {
+      setMsgs([...next, { role: 'model', text: 'Sem conexão. Tente de novo.', erro: true }]);
+    } finally { setBusy(false); }
+  }
+
+  async function enviarAudio(som) {
+    const pedido = text.trim();
+    const tm = `🎤 [áudio] ${pedido || 'Traduza este áudio'}`;
+    const next = [...msgs, { role: 'user', text: tm, somUrl: som.url }];
+    setMsgs(next); setText(''); setAudio(null); setBusy(true);
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: [{ role: 'user', text: tm }], audio: { mime: som.mime, data: som.data } }),
+      });
+      const d = await r.json();
+      if (d.resposta) {
+        setMsgs([...next, { role: 'model', text: d.resposta, fala: d.fala, narrar: Boolean(d.fala) }]);
+        salvar([{ role: 'user', texto: tm }, { role: 'model', texto: d.resposta }]);
       } else {
         setMsgs([...next, { role: 'model', text: d.codigo ? `${d.erro} (código: ${String(d.codigo).slice(0, 60)})` : d.erro, erro: true }]);
       }
@@ -236,17 +290,18 @@ export default function Chat() {
         </div>
       )}
       <div className="msgs">
-        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" ou toque em 📷 para analisar uma foto.</p>}
+        {msgs.length === 0 && <p className="hint">Pergunte, peça um texto, um anúncio… peça "crie uma imagem de…" toque em 📷 para analisar uma foto, ou em 🎤 para gravar um áudio e traduzir.</p>}
         {msgs.map((m, i) => (
           <div key={i} className={`msg ${m.role}${m.erro ? ' erro' : ''}`}>
             {m.preview && <img src={m.preview} alt="Foto enviada" className="foto-msg" />}
+            {m.somUrl && <audio className="audio-msg" controls src={m.somUrl} />}
             {m.role === 'model' && !m.erro ? <Texto texto={m.text} /> : m.text}
             {m.gerada && (
               <a href={m.gerada} download="nexora-imagem.jpg">
                 <img src={m.gerada} alt="Imagem criada pela NEXORA" className="imagem-gerada" />
               </a>
             )}
-            {m.role === 'model' && !m.erro && !m.gerada && <Ouvir texto={m.text} auto={m.narrar} />}
+            {m.role === 'model' && !m.erro && !m.gerada && <Ouvir texto={m.fala || m.text} auto={m.narrar} />}
           </div>
         ))}
         {busy && <div className="msg model pensando">NEXORA está pensando…</div>}
@@ -258,12 +313,19 @@ export default function Chat() {
           <button type="button" onClick={() => setFoto(null)}>Remover foto</button>
         </div>
       )}
+      {(audio || gravando > 0) && (
+        <div className="foto-previa">
+          {gravando > 0 ? <span>🔴 Gravando… {gravando}s (máx. 60s)</span> : <audio controls src={audio.url} />}
+          {audio && <button type="button" onClick={() => setAudio(null)}>Apagar</button>}
+        </div>
+      )}
       <form onSubmit={send}>
         <input ref={arquivo} type="file" accept="image/*" hidden onChange={escolherFoto} />
         <button type="button" className="botao-foto" onClick={() => arquivo.current?.click()} disabled={busy} aria-label="Enviar foto">📷</button>
+        <button type="button" className="botao-foto" onClick={gravar} disabled={busy} aria-label="Gravar áudio">{gravando ? '⏹' : '🎤'}</button>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={4000}
-          placeholder={foto ? "Pergunte sobre a foto, ou peça: coloque numa mesa com flores" : "Escreva sua mensagem"} aria-label="Mensagem" />
-        <button disabled={busy || (!text.trim() && !foto)}>Enviar</button>
+          placeholder={audio ? 'Para qual língua? (ex.: espanhol) ou só toque em Enviar' : foto ? 'Pergunte sobre a foto, ou peça: coloque numa mesa com flores' : 'Escreva sua mensagem'} aria-label="Mensagem" />
+        <button disabled={busy || gravando > 0 || (!text.trim() && !foto && !audio)}>Enviar</button>
       </form>
       {!usuario && msgs.length > 0 && <button className="limpar" onClick={novaConversa}>Nova conversa</button>}
     </section>
