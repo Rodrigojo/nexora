@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 7, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 9, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -170,4 +170,12 @@ test('site: pedido e leitura do HTML', async () => {
   const h = lerHtml('```html\n<!DOCTYPE html><html><head><title>Loja</title></head></html>\n```');
   assert.ok(h.startsWith('<!DOCTYPE'));
   assert.equal(tituloHtml(h), 'Loja');
+});
+
+test('animar foto x avatar anime', async () => {
+  const { pedidoAnimar, pedidoAvatar } = await import('../lib/core/router.js');
+  assert.ok(pedidoAnimar('anime essa foto'));
+  assert.ok(pedidoAnimar('dá vida a essa foto'));
+  assert.ok(!pedidoAnimar('faz meu avatar estilo anime'));
+  assert.ok(pedidoAvatar('faz meu avatar estilo anime'));
 });

@@ -32,7 +32,8 @@ function quebrar(ctx, texto, largura) {
 
 /** Desenha um quadro: imagem cobrindo a tela vertical, com zoom e deslize, e a legenda embaixo. */
 function quadro(ctx, img, p, idx, legenda, alpha = 1) {
-  const escala = Math.max(W / img.width, H / img.height) * (1.05 + 0.12 * p);
+  const z = [1.05 + 0.15 * p, 1.14, 1.22 - 0.15 * p][idx % 3]; // aproxima, desliza, afasta
+  const escala = Math.max(W / img.width, H / img.height) * z;
   const w = img.width * escala, h = img.height * escala;
   const folga = w - W;
   const x = idx % 2 === 0 ? -folga * p : -folga * (1 - p); // alterna o lado do deslize
@@ -50,7 +51,7 @@ function quadro(ctx, img, p, idx, legenda, alpha = 1) {
   linhas.forEach((l, i) => ctx.fillText(l, W / 2, y0 + 22 + i * 66));
 }
 
-export default function Video({ video, refFoto, produto, midiaId }) {
+export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) {
   const [estado, setEstado] = useState('narracao'); // narracao | pronto | gravando | feito | erro
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState(null);
@@ -68,7 +69,12 @@ export default function Video({ video, refFoto, produto, midiaId }) {
       const cena = (c, extra) => post('/api/cena', { prompt: c.prompt, ...extra })
         .then((d) => (d.imagem ? { ...d, legenda: c.legenda } : null)).catch(() => null);
       let feitas;
-      if (refFoto) feitas = await Promise.all(video.cenas.map((c) => cena(c, { ref: refFoto, produto })));
+      if (video.animar && fotoAnimar) {
+        // Animar foto: a própria foto em 3 movimentos de câmera diferentes.
+        const [cab, dados] = fotoAnimar.split(',');
+        const mime = cab.slice(5).split(';')[0];
+        feitas = video.cenas.map((c) => ({ mime, imagem: dados, legenda: c.legenda }));
+      } else if (refFoto) feitas = await Promise.all(video.cenas.map((c) => cena(c, { ref: refFoto, produto })));
       else if (video.personagem) {
         // Mesmo personagem em todas as cenas: a 1ª cena vira a referência das outras.
         const primeira = await cena(video.cenas[0], {});
@@ -149,7 +155,7 @@ export default function Video({ video, refFoto, produto, midiaId }) {
 
   return (
     <div className="video-box">
-      {estado === 'narracao' && <p className="hint">Criando as cenas e a narração… (até 40 s)</p>}
+      {estado === 'narracao' && <p className="hint">{video.animar ? 'Preparando a narração… (até 20 s)' : 'Criando as cenas e a narração… (até 40 s)'}</p>}
       {estado === 'pronto' && <button type="button" onClick={() => montar(false)}>🎬 Montar vídeo</button>}
       {estado === 'gravando' && <p className="hint">Montando o vídeo… {pct}% (deixe esta tela aberta)</p>}
       {estado === 'feito' && url && (
