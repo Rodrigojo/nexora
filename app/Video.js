@@ -71,9 +71,18 @@ export default function Video({ video, refFoto, produto, midiaId, fotoAnimar }) 
       let feitas;
       if (video.animar && fotoAnimar) {
         // Animar foto: a própria foto em 3 movimentos de câmera diferentes.
-        const [cab, dados] = fotoAnimar.split(',');
-        const mime = cab.slice(5).split(';')[0];
-        feitas = video.cenas.map((c) => ({ mime, imagem: dados, legenda: c.legenda }));
+        // Foto inteira no centro, fundo da própria foto desfocado (não corta o rosto).
+        const img = await carregar(fotoAnimar);
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const g = cv.getContext('2d');
+        const capa = Math.max(W / img.width, H / img.height);
+        g.filter = 'blur(28px) brightness(0.7)';
+        g.drawImage(img, (W - img.width * capa) / 2, (H - img.height * capa) / 2, img.width * capa, img.height * capa);
+        g.filter = 'none';
+        const cab = Math.min(W / img.width, (H * 0.8) / img.height);
+        g.drawImage(img, (W - img.width * cab) / 2, (H - img.height * cab) / 2, img.width * cab, img.height * cab);
+        const dados = cv.toDataURL('image/jpeg', 0.9).split(',')[1];
+        feitas = video.cenas.map((c) => ({ mime: 'image/jpeg', imagem: dados, legenda: c.legenda }));
       } else if (refFoto) feitas = await Promise.all(video.cenas.map((c) => cena(c, { ref: refFoto, produto })));
       else if (video.personagem) {
         // Mesmo personagem em todas as cenas: a 1ª cena vira a referência das outras.
