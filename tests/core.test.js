@@ -105,3 +105,9 @@ test('imagem: pedido detectado e Cloudflare chamado', async () => {
   assert.ok(url.includes('/accounts/abc/ai/run/@cf/black-forest-labs/flux-1-schnell'));
   await assert.rejects(() => gerarImagem({ prompt: 'x', fetchImpl: fake }), /SEM_CHAVE/);
 });
+
+test('imagem: variações do pedido', () => {
+  for (const t of ['Cria uma imagem de perfume da natura essencial', 'gera uma foto de praia', 'faz um desenho de gato', 'desenha um logo pra minha loja', 'me dá uma imagem de bolo'])
+    assert.equal(detectIntent(t).capability.id, 3, t);
+  assert.notEqual(detectIntent('o que é uma imagem vetorial?').capability.id, 3);
+});
