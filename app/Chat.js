@@ -78,7 +78,14 @@ export default function Chat() {
     if (gravador.current) { gravador.current.stop(); return; }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch { alert('Permita o microfone para gravar o áudio.'); return; }
+    catch (err) {
+      const n = err?.name || 'erro';
+      const msg = n === 'NotAllowedError' ? 'O microfone foi negado. Toque no ícone ao lado do endereço e permita o Microfone.'
+        : n === 'NotReadableError' ? 'O microfone está sendo usado por outro app (ligação, gravador ou fone Bluetooth). Feche-o e tente de novo.'
+        : n === 'NotFoundError' ? 'Não achei nenhum microfone no aparelho.'
+        : 'Não consegui abrir o microfone.';
+      alert(`${msg} (código: ${n})`); return;
+    }
     const tipo = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
     const rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
     const partes = [];
