@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAPABILITIES, VERSION_1 } from '../lib/core/capabilities.js';
-import { detectIntent } from '../lib/core/router.js';
+import { detectIntent, pedidoEdicao } from '../lib/core/router.js';
 
 test('as 25 capacidades estão registradas, com ids únicos de 1 a 25', () => {
   assert.equal(CAPABILITIES.length, 25);
@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 9, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -110,4 +110,11 @@ test('imagem: variações do pedido', () => {
   for (const t of ['Cria uma imagem de perfume da natura essencial', 'gera uma foto de praia', 'faz um desenho de gato', 'desenha um logo pra minha loja', 'me dá uma imagem de bolo'])
     assert.equal(detectIntent(t).capability.id, 3, t);
   assert.notEqual(detectIntent('o que é uma imagem vetorial?').capability.id, 3);
+});
+
+test('foto: editar x analisar', () => {
+  assert.equal(pedidoEdicao('coloque numa mesa com flores'), true);
+  assert.equal(pedidoEdicao('crie uma propaganda com esse perfume'), true);
+  assert.equal(pedidoEdicao('O que tem nesta foto?'), false);
+  assert.equal(pedidoEdicao('leia o que está escrito'), false);
 });

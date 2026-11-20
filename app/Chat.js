@@ -19,7 +19,13 @@ function reduzirFoto(file) {
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
       URL.revokeObjectURL(url);
       const dataUrl = cv.toDataURL('image/jpeg', 0.85);
-      ok({ mime: 'image/jpeg', data: dataUrl.split(',')[1], preview: dataUrl });
+      // Cópia pequena (até 510 px) para a IA de imagem usar a foto como base (exigência do modelo).
+      const k2 = Math.min(1, 510 / Math.max(img.width, img.height));
+      const cv2 = document.createElement('canvas');
+      cv2.width = Math.round(img.width * k2); cv2.height = Math.round(img.height * k2);
+      cv2.getContext('2d').drawImage(img, 0, 0, cv2.width, cv2.height);
+      const ref = cv2.toDataURL('image/jpeg', 0.9).split(',')[1];
+      ok({ mime: 'image/jpeg', data: dataUrl.split(',')[1], ref, preview: dataUrl });
     };
     img.onerror = () => { URL.revokeObjectURL(url); falha(new Error('foto')); };
     img.src = url;
@@ -136,7 +142,7 @@ export default function Chat() {
       const hist = next.filter((m) => !m.erro).map((m) => ({ role: m.role, text: m.text }));
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data } : undefined }),
+        body: JSON.stringify({ history: hist, imagem: img ? { mime: img.mime, data: img.data, ref: img.ref } : undefined }),
       });
       const d = await r.json();
       if (d.resposta) {
@@ -208,7 +214,7 @@ export default function Chat() {
         <input ref={arquivo} type="file" accept="image/*" hidden onChange={escolherFoto} />
         <button type="button" className="botao-foto" onClick={() => arquivo.current?.click()} disabled={busy} aria-label="Enviar foto">📷</button>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={4000}
-          placeholder={foto ? "Pergunte sobre a foto (opcional)" : "Escreva sua mensagem"} aria-label="Mensagem" />
+          placeholder={foto ? "Pergunte sobre a foto, ou peça: coloque numa mesa com flores" : "Escreva sua mensagem"} aria-label="Mensagem" />
         <button disabled={busy || (!text.trim() && !foto)}>Enviar</button>
       </form>
       {!usuario && msgs.length > 0 && <button className="limpar" onClick={novaConversa}>Nova conversa</button>}
