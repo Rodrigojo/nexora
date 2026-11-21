@@ -1,3 +1,4 @@
+import { TEXTO } from '../../../lib/ai/modelos.js';
 // Capacidade 12 — "Editar sozinho": o Gemini olha 4 quadros do vídeo e decide corte, texto, filtro e velocidade.
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -30,7 +31,7 @@ Corte partes paradas ou tremidas do começo e do fim; mantenha o melhor trecho (
   const parts = [{ text: instr }];
   for (const q of quadros) parts.push({ text: `Quadro em ${Number(q.t).toFixed(1)}s:` }, { inlineData: { mimeType: 'image/jpeg', data: q.data } });
   const erros = [];
-  for (const modelo of ['gemini-2.5-flash', 'gemini-flash-latest']) {
+  for (const modelo of TEXTO.slice(0, 3)) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
         method: 'POST', signal: AbortSignal.timeout(20000),
