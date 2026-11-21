@@ -29,6 +29,7 @@ Decida a melhor edição. Responda SOMENTE com JSON: {"inicio":segundos,"fim":se
 Corte partes paradas ou tremidas do começo e do fim; mantenha o melhor trecho (de preferência até 30 s). Use velocidade 1 se houver pessoas falando.${input?.pedido ? ` Pedido da pessoa: ${String(input.pedido).slice(0, 300)}` : ''}`;
   const parts = [{ text: instr }];
   for (const q of quadros) parts.push({ text: `Quadro em ${Number(q.t).toFixed(1)}s:` }, { inlineData: { mimeType: 'image/jpeg', data: q.data } });
+  const erros = [];
   for (const modelo of ['gemini-2.5-flash', 'gemini-flash-latest']) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
@@ -37,10 +38,10 @@ Corte partes paradas ou tremidas do começo e do fim; mantenha o melhor trecho (
         body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, responseMimeType: 'application/json' } }),
       });
       if (r.status === 429) return Response.json({ erro: 'Limite de hoje atingido. Tente amanhã.' }, { status: 429 });
-      if (!r.ok) continue;
+      if (!r.ok) { let w = ''; try { w = (await r.json())?.error?.message?.slice(0, 120) || ''; } catch {} erros.push(`${r.status}:${modelo}:${w}`); continue; }
       const j = await r.json();
       return Response.json(lerEdicao(j?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join(''), duracao));
-    } catch { /* tenta o próximo */ }
+    } catch (e) { erros.push(`${e.name}:${modelo}`); }
   }
-  return Response.json({ erro: 'Não consegui analisar o vídeo agora.' }, { status: 502 });
+  return Response.json({ erro: 'Não consegui analisar o vídeo agora.', codigo: erros.join('|').slice(0, 300) }, { status: 502 });
 }
