@@ -13,7 +13,7 @@ test('a versão 1 tem exatamente as 11 capacidades combinadas', () => {
 });
 
 test('ativas: as 11 da versão 1 + análise de fotos (23)', () => {
-  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
+  assert.deepEqual(CAPABILITIES.filter((c) => c.status === 'ativa').map((c) => c.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
 });
 
 test('o núcleo identifica intenções', () => {
@@ -23,9 +23,17 @@ test('o núcleo identifica intenções', () => {
   assert.equal(detectIntent('Olá, tudo bem?').capability.id, 1);
 });
 
-test('capacidades futuras são marcadas como indisponíveis', () => {
-  const r = detectIntent('Faça uma música para meu vídeo');
-  assert.equal(r.disponivel, false);
+test('música: pedido vira capacidade 11; letra continua texto', async () => {
+  const { pedidoMusica } = await import('../lib/core/router.js');
+  for (const t of ['Faça uma música para meu vídeo', 'crie uma trilha sonora animada', 'quero um jingle para minha loja']) {
+    assert.equal(pedidoMusica(t), true, t);
+    assert.equal(detectIntent(t).capability.id, 11, t);
+    assert.equal(detectIntent(t).disponivel, true, t);
+  }
+  assert.equal(pedidoMusica('escreva a letra de uma música sobre amor'), false);
+  const { estereo48ParaMono24 } = await import('../lib/ai/musica.js');
+  const b = Buffer.alloc(16); b.writeInt16LE(100, 0); b.writeInt16LE(300, 2); b.writeInt16LE(100, 4); b.writeInt16LE(300, 6);
+  assert.equal(estereo48ParaMono24(b).readInt16LE(0), 200);
 });
 
 test('roteiro para vídeo é texto e fica disponível', () => {

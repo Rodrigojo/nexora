@@ -21,6 +21,9 @@ function Uma({ id, tipo }) {
   if (falta) return <p className="hint">(Criado em outro aparelho ou navegador.)</p>;
   if (tipo === 'site') return html ? <Site html={html} /> : null;
   if (!url) return null;
+  if (tipo === 'musica') return (
+    <div className="video-box"><audio src={url} controls style={{ width: '100%' }} /><a className="baixar" href={url} download="nexora-musica.wav">⬇️ Baixar música</a></div>
+  );
   const ext = tipo === 'video' ? 'mp4' : 'jpg';
   return tipo === 'video' ? (
     <div className="video-box">

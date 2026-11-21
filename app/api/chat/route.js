@@ -1,4 +1,4 @@
-import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo, pedidoAutomacao } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo, pedidoAutomacao, pedidoMusica } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
@@ -57,6 +57,10 @@ export async function POST(req) {
       const msgs = { SEM_CHAVE: 'A criação de sites ainda não está conectada.', LIMITE: 'Limite de hoje atingido. Tente amanhã.' };
       return Response.json({ erro: msgs[e.message] || 'Não consegui criar o site agora. Tente de novo.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
     }
+  }
+  // Música (capacidade 11): o celular pede o áudio em /api/musica (instrumental, sem voz).
+  if (!img.imagem && pedidoMusica(last)) {
+    return Response.json({ resposta: '🎵 **Sua música** (instrumental, sem voz)', musica: { pedido: last }, capacidade: 11, ia: true });
   }
   // Automação (capacidade 19): kit pronto de mensagens automáticas para o WhatsApp Business.
   if (!img.imagem && pedidoAutomacao(last)) {
