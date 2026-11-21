@@ -17,7 +17,7 @@ function quebrar(ctx, texto, largura) {
   return linhas.slice(0, 3);
 }
 
-export default function EditorVideo({ midiaId }) {
+export default function EditorVideo({ midiaId, pedido }) {
   const arquivo = useRef(null);
   const vid = useRef(null);
   const audio = useRef(null); // { ac, fonte } — o navegador só deixa ligar o som do vídeo uma vez
@@ -34,6 +34,7 @@ export default function EditorVideo({ midiaId }) {
   const [prog, setProg] = useState(0);
   const [url, setUrl] = useState(null);
   const [ext, setExt] = useState('mp4');
+  const [auto, setAuto] = useState(''); // '' | 'analisando' | 'pronto'
 
   useEffect(() => () => { if (src) URL.revokeObjectURL(src); }, [src]);
 
@@ -47,6 +48,30 @@ export default function EditorVideo({ midiaId }) {
     setDur(d); setIni(0); setFim(d);
   }
   function ver(t) { if (vid.current) { vid.current.currentTime = t; } }
+
+  // ✨ Editar sozinho: tira 4 quadros do vídeo, a IA decide e o vídeo é gerado na hora.
+  async function editarSozinho() {
+    const v = vid.current; if (!v || !dur) return;
+    setAuto('analisando');
+    try {
+      const k = Math.min(1, 320 / Math.max(v.videoWidth || 320, v.videoHeight || 320));
+      const cv = document.createElement('canvas'); cv.width = Math.round((v.videoWidth || 320) * k); cv.height = Math.round((v.videoHeight || 320) * k);
+      const g = cv.getContext('2d');
+      const quadros = [];
+      for (const f of [0.1, 0.35, 0.6, 0.85]) {
+        const t = dur * f;
+        v.currentTime = t;
+        await new Promise((ok) => { v.onseeked = () => { v.onseeked = null; ok(); }; });
+        g.drawImage(v, 0, 0, cv.width, cv.height);
+        quadros.push({ t, data: cv.toDataURL('image/jpeg', 0.7).split(',')[1] });
+      }
+      const r = await fetch('/api/editar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quadros, duracao: dur, pedido }) }).then((x) => x.json());
+      if (r.erro) { setAuto(''); alert(r.erro); return; }
+      setIni(r.inicio); setFim(Math.min(dur, r.fim)); setVel(r.velocidade); setFiltro(r.filtro); setTexto(r.texto); setPosTexto(r.posicao);
+      setAuto('pronto');
+    } catch { setAuto(''); }
+  }
+  useEffect(() => { if (auto === 'pronto') { setAuto(''); gerar(); } }, [auto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function gerar() {
     const v = vid.current; if (!v) return;
@@ -129,6 +154,8 @@ export default function EditorVideo({ midiaId }) {
             style={{ width: '100%', maxHeight: 420, background: '#000', borderRadius: 12, filter: FILTROS[filtro] }} />
           {estado === 'editar' && dur > 0 && (
             <div className="controles" style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              <button type="button" onClick={editarSozinho} disabled={auto === 'analisando'}>{auto === 'analisando' ? '⏳ A IA está assistindo o vídeo…' : '✨ Editar sozinho (a IA decide tudo)'}</button>
+              <p className="hint" style={{ margin: 0 }}>Ou ajuste você mesmo:</p>
               <label>✂️ Começa em {fmt(ini)}
                 <input type="range" min={0} max={dur} step={0.1} value={ini} style={{ width: '100%' }}
                   onChange={(e) => { const x = Math.min(+e.target.value, fim - 0.5); setIni(x); ver(x); }} /></label>

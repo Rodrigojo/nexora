@@ -13,9 +13,10 @@ export async function POST(req) {
   let input;
   try { input = await req.json(); } catch { return Response.json({ erro: 'Pedido inválido.' }, { status: 400 }); }
   const texto = String(input?.texto || '');
-  if (!texto.trim()) return Response.json({ erro: ERRORS.VAZIO }, { status: 400 });
+  const dialogo = input?.dialogo && Array.isArray(input.dialogo.falas) ? input.dialogo : null;
+  if (!texto.trim() && !dialogo) return Response.json({ erro: ERRORS.VAZIO }, { status: 400 });
   try {
-    const r = await narrar({ texto, voz: input?.voz, apiKey: process.env.GEMINI_API_KEY });
+    const r = await narrar({ texto, voz: input?.voz, dialogo, apiKey: process.env.GEMINI_API_KEY });
     return Response.json({ audio: r.audio, mime: r.mime });
   } catch (e) {
     console.error('voz_error', e.message);

@@ -215,3 +215,15 @@ test('automação: pedido e leitura do kit', async () => {
   assert.match(automacaoEmTexto(a), /Saudação/);
   assert.equal(lerAutomacao('nada'), null);
 });
+
+test('vídeo com personagens conversando: pedido e roteiro', async () => {
+  const { pedidoDialogo } = await import('../lib/core/router.js');
+  const { lerDialogo } = await import('../lib/ai/video.js');
+  const { vozesDialogo } = await import('../lib/ai/voz.js');
+  assert.equal(pedidoDialogo('crie um vídeo com dois personagens conversando sobre minha loja'), true);
+  assert.equal(pedidoDialogo('vídeo de personagens falando do perfume'), true);
+  assert.equal(pedidoDialogo('crie um vídeo da minha loja'), false);
+  const d = lerDialogo('{"titulo":"T","cenario":"shop","personagens":[{"nome":"Ana","genero":"feminino","descricao":"a"},{"nome":"Ana","genero":"feminino","descricao":"b"}],"falas":[{"p":0,"texto":"Oi"},{"p":1,"texto":"Olá"}]}');
+  assert.equal(d.personagens[1].nome, 'Ana 2');
+  assert.deepEqual(vozesDialogo(d.personagens), ['Kore', 'Aoede']);
+});

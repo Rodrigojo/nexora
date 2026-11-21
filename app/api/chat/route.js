@@ -1,10 +1,10 @@
-import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo, pedidoAutomacao, pedidoMusica } from '../../../lib/core/router.js';
+import { detectIntent, unavailableMessage, pedidoEdicao, pedidoAvatar, pedidoAnimar, pedidoApresentador, pedidoEditarVideo, pedidoAutomacao, pedidoMusica, pedidoDialogo } from '../../../lib/core/router.js';
 import { getCapability } from '../../../lib/core/capabilities.js';
 import { askGemini } from '../../../lib/ai/gemini.js';
 import { validateChat, validateImage, validateAudio } from '../../../lib/core/validate.js';
 import { SISTEMA_TRADUCAO, lerTraducao } from '../../../lib/ai/traducao.js';
 import { gerarImagem, editarFoto, promptEmIngles } from '../../../lib/ai/imagem.js';
-import { roteiroVideo, roteiroFoto, roteiroApresentador } from '../../../lib/ai/video.js';
+import { roteiroVideo, roteiroFoto, roteiroApresentador, roteiroDialogo } from '../../../lib/ai/video.js';
 import { estilosDoPedido } from '../../../lib/ai/avatar.js';
 import { criarSite } from '../../../lib/ai/site.js';
 import { criarAutomacao, automacaoEmTexto } from '../../../lib/ai/automacao.js';
@@ -75,6 +75,16 @@ export async function POST(req) {
   // Edição de vídeo (capacidade 12): tudo acontece no celular, sem gastar limite.
   if (!img.imagem && pedidoEditarVideo(last)) {
     return Response.json({ resposta: '✂️ **Editor de vídeo**\n\nEscolha o vídeo do celular e ajuste: cortar começo e fim, velocidade, texto na tela, filtro e som.', editorVideo: true, capacidade: 12, ia: true });
+  }
+  // Vídeo com personagens conversando (capacidade 5): 2 personagens, vozes diferentes.
+  if (!img.imagem && !input.produto && pedidoDialogo(last)) {
+    try {
+      const d = await roteiroDialogo({ pedido: last, apiKey: process.env.GEMINI_API_KEY });
+      return Response.json({ resposta: `🎭 **${d.titulo}**`, dialogo: d, capacidade: 5, ia: true });
+    } catch (e) {
+      console.error('dialogo_error', e.message);
+      return Response.json({ erro: e.message === 'LIMITE' ? 'Limite de hoje atingido. Tente amanhã.' : 'Não consegui criar a conversa agora.', codigo: String(e.message).slice(0, 200) }, { status: 502 });
+    }
   }
   // Apresentador virtual (capacidade 8): fala + legendas; o celular anima a foto (ou cria um apresentador).
   if (!input.produto && pedidoApresentador(last)) {
